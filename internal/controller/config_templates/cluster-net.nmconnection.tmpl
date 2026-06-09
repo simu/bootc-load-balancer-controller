@@ -1,0 +1,18 @@
+[connection]
+id=cluster-net
+type=ethernet
+autoconnect-priority=-999
+
+[user]
+org.freedesktop.NetworkManager.origin=bootc-loadbalancer-controller
+
+[ethernet]
+mac-address={{ .MACAddress }}
+
+[ipv4]
+method=auto
+address1={{ .IPAddress }}/32
+
+[ipv6]
+addr-gen-mode=default
+method=auto

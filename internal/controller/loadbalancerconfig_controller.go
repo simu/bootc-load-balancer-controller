@@ -102,7 +102,13 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		errors = append(errors, err)
 	}
 
-	//TODO(sg): decide who is responsible to apply internal IP to internal iface
+	if clusterNetNMConn, err := r.RenderClusterNetNMConnection(ctx, &lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ClusterNetworkNMConnectionFile, clusterNetNMConn); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
 
 	if keepalivedNMConn, err := r.RenderKeepalivedDummyNMConnection(ctx, &lbconfig); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedDummyNMConnectionFile, keepalivedNMConn); err != nil {

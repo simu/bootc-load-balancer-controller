@@ -17,10 +17,9 @@ const (
 	HAProxyIngressConfigFile = "/etc/haproxy/conf.d/ingress.cfg"
 	KeepalivedConfigFile     = "/etc/keepalived/keepalived.conf"
 
+	PublicNMConnectionFile          = "/etc/NetworkManager/system-connections/public.nmconnection"
+	ClusterNetworkNMConnectionFile  = "/etc/NetworkManager/system-connections/cluster-net.nmconnection"
 	KeepalivedDummyNMConnectionFile = "/etc/NetworkManager/system-connections/keepalived.nmconnection"
-
-	PublicNMConnectionFile  = "/etc/NetworkManager/system-connections/public.nmconnection"
-	PrivateNMConnectionFile = "/etc/NetworkManager/system-connections/private.nmconnection"
 
 	fileHeader = "# Managed by bootc-loadbalancer-controller\n"
 )

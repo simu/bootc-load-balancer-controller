@@ -32,7 +32,11 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 
 	extraVips := []netip.Prefix{}
 	if lbconfig.Spec.VirtualAddresses.NAT != nil {
-		extraVips = append(extraVips, internalIPs.DefaultGateway)
+		if gwPrefix, err := internalIPs.DefaultGateway.Prefix(32); err == nil {
+			extraVips = append(extraVips, gwPrefix)
+		} else {
+			l.Error(err, "failed to convert default gateway IP to CIDR notation")
+		}
 	}
 
 	vips, err := privateVIPs(&lbconfig.Spec.VirtualAddresses, extraVips...)

@@ -27,9 +27,10 @@ type FrontendData struct {
 }
 
 type InternalIPs struct {
-	DefaultGateway netip.Prefix
-	Primary        netip.Prefix
-	Secondary      netip.Prefix
+	ClusterNetwork netip.Prefix
+	DefaultGateway netip.Addr
+	Primary        netip.Addr
+	Secondary      netip.Addr
 }
 
 func (r *LoadBalancerConfigReconciler) getHAProxyBackends(ctx context.Context, ls *metav1.LabelSelector) ([]Backend, error) {
@@ -198,35 +199,26 @@ func (r *LoadBalancerConfigReconciler) internalIPs(lbconfig *lb.LoadBalancerConf
 	defaultGateway := netaddr.Next()
 	primaryIP := defaultGateway.Next()
 	secondaryIP := primaryIP.Next()
-	defaultGatewayPrefix, e := defaultGateway.Prefix(32)
-	err = multierr.Combine(err, e)
-	primaryIPPrefix, e := primaryIP.Prefix(32)
-	err = multierr.Combine(err, e)
-	secondaryIPPrefix, e := secondaryIP.Prefix(32)
-	err = multierr.Combine(err, e)
-	if err == nil {
-		return &InternalIPs{
-			DefaultGateway: defaultGatewayPrefix,
-			Primary:        primaryIPPrefix,
-			Secondary:      secondaryIPPrefix,
-		}, nil
-	} else {
-		return nil, err
-	}
+	return &InternalIPs{
+		ClusterNetwork: clusternet,
+		DefaultGateway: defaultGateway,
+		Primary:        primaryIP,
+		Secondary:      secondaryIP,
+	}, nil
 }
 
 func (ip *InternalIPs) myInternalIP(isPrimary bool) string {
 	if isPrimary {
-		ip.Primary.Addr().String()
+		return ip.Primary.String()
 	}
-	return ip.Secondary.Addr().String()
+	return ip.Secondary.String()
 }
 
 func (ip *InternalIPs) peerInternalIP(isPrimary bool) string {
 	if isPrimary {
-		ip.Secondary.Addr().String()
+		return ip.Secondary.String()
 	}
-	return ip.Primary.Addr().String()
+	return ip.Primary.String()
 }
 
 func sortIPs(ips []netip.Addr) {
