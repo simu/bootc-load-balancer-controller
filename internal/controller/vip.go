@@ -215,26 +215,18 @@ func (r *LoadBalancerConfigReconciler) internalIPs(lbconfig *lb.LoadBalancerConf
 	}
 }
 
-func (ip *InternalIPs) myInternalIP(isPrimary, prefix bool) string {
-	a := ip.Secondary
+func (ip *InternalIPs) myInternalIP(isPrimary bool) string {
 	if isPrimary {
-		a = ip.Primary
+		ip.Primary.Addr().String()
 	}
-	if !prefix {
-		return a.Addr().String()
-	}
-	return a.String()
+	return ip.Secondary.Addr().String()
 }
 
-func (ip *InternalIPs) peerInternalIP(isPrimary, prefix bool) string {
-	a := ip.Primary
+func (ip *InternalIPs) peerInternalIP(isPrimary bool) string {
 	if isPrimary {
-		a = ip.Secondary
+		ip.Secondary.Addr().String()
 	}
-	if !prefix {
-		return a.Addr().String()
-	}
-	return a.String()
+	return ip.Primary.Addr().String()
 }
 
 func sortIPs(ips []netip.Addr) {

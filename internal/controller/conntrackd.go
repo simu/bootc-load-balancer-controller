@@ -19,7 +19,7 @@ func (r *LoadBalancerConfigReconciler) RenderConntrackdConfig(ctx context.Contex
 	l.Info("Rendering conntrackd config", "interface", r.KeepalivedConfig.Interface)
 	return renderTemplate(lbconfig.Spec.Distribution, "conntrackd.conf.tmpl", map[string]any{
 		"Interface": r.KeepalivedConfig.Interface,
-		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary, false),
-		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary, false),
+		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
+		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary),
 	})
 }

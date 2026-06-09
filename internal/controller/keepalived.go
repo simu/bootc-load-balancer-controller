@@ -44,8 +44,8 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 	return renderTemplate(lbconfig.Spec.Distribution, "keepalived.conf.tmpl", map[string]any{
 		"Interface": r.KeepalivedConfig.Interface,
 		"Priority":  prio,
-		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary, false),
-		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary, false),
+		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
+		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary),
 		"VIPs":      vips,
 	})
 }
