@@ -1,0 +1,18 @@
+[connection]
+id=public
+autoconnect-priority=-999
+type=ethernet
+
+[user]
+org.freedesktop.NetworkManager.origin=bootc-loadbalancer-controller
+
+[ethernet]
+mac-address={{ .MACAddress }}
+
+[ipv4]
+method=auto
+may-fail=true
+
+[ipv6]
+method=auto
+may-fail=true

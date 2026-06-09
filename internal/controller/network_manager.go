@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -30,5 +31,25 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedDummyNMConnection(ctx con
 	return renderTemplate("", "keepalived.nmconnection.tmpl", map[string]any{
 		"VIPs4": vips4,
 		"VIPs6": vips6,
+	})
+}
+
+func (r *LoadBalancerConfigReconciler) RenderPublicNMConnection(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
+	l := logf.FromContext(ctx)
+
+	macAddr := ""
+	ifList, err := net.Interfaces()
+	if err != nil {
+		return "", fmt.Errorf("fetching interfaces: %w", err)
+	}
+	for _, iface := range ifList {
+		if iface.Name == r.PublicInterface {
+			macAddr = iface.HardwareAddr.String()
+		}
+	}
+
+	l.Info("Rendering NetworkManager public interface config", "interface", r.PublicInterface)
+	return renderTemplate("", "public.nmconnection.tmpl", map[string]any{
+		"MACAddress": macAddr,
 	})
 }

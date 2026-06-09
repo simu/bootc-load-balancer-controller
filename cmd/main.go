@@ -188,9 +188,11 @@ func main() {
 	}
 
 	if err := (&controller.LoadBalancerConfigReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		ConfigRoot: configRoot,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+
+		ConfigRoot:      configRoot,
+		PublicInterface: publicInterface,
 		KeepalivedConfig: controller.KeepalivedConfig{
 			Interface: keepalivedInterface,
 			IsPrimary: isPrimary,

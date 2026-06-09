@@ -2,12 +2,16 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/multierr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 )
@@ -18,7 +22,8 @@ type LoadBalancerConfigReconciler struct {
 	Scheme *runtime.Scheme
 
 	// General
-	ConfigRoot string
+	ConfigRoot      string
+	PublicInterface string
 
 	// Keepalived
 	KeepalivedConfig KeepalivedConfig
@@ -89,8 +94,8 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	//TODO(sg): firewall rules
 
-	if keepalivedNMConn, err := r.RenderKeepalivedDummyNMConnection(ctx, &lbconfig); err == nil {
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedDummyNMConnectionFile, keepalivedNMConn); err != nil {
+	if publicNMConn, err := r.RenderPublicNMConnection(ctx, &lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, PublicNMConnectionFile, publicNMConn); err != nil {
 			errors = append(errors, err)
 		}
 	} else {
@@ -98,6 +103,14 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	//TODO(sg): decide who is responsible to apply internal IP to internal iface
+
+	if keepalivedNMConn, err := r.RenderKeepalivedDummyNMConnection(ctx, &lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedDummyNMConnectionFile, keepalivedNMConn); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
 
 	return ctrl.Result{}, multierr.Combine(errors...)
 }
@@ -107,5 +120,9 @@ func (r *LoadBalancerConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&lb.LoadBalancerConfig{}).
 		Named("loadbalancerconfig").
+		WithOptions(controller.Options{
+			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](
+				10*time.Second, 5*time.Minute),
+		}).
 		Complete(r)
 }
