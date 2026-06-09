@@ -47,6 +47,9 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	l.Info("Cloud credentials secret", "token", credentialSecret.Data["token"])
 
+	res, err := r.RenderHAProxyConfig(ctx, &lbconfig)
+	l.Info("HAProxy config", "config", res, "err", err)
+
 	return ctrl.Result{}, nil
 }
 

@@ -1,0 +1,25 @@
+frontend fe-api
+  mode tcp
+  default_backend be-api
+{{- range .Frontends.API }}
+  bind {{ . }}:6443
+{{- end }}
+
+frontend fe-ign
+  mode tcp
+  default_backend be-ign
+{{- range .Frontends.Ignition }}
+  bind {{ . }}:22623
+{{- end }}
+
+backend be-api
+  option httpchk GET /readyz
+{{- range $index, $backend := .Backends }}
+  server server_{{ $index }} {{ $backend.Address }}:6443 check check-ssl verify none resolvers localdns
+{{- end }}
+
+backend be-ign
+  balance roundrobin
+{{- range $index, $backend := .Backends }}
+  server server_{{ $index }} {{ $backend.Address }}:22623 check check-ssl verify none resolvers localdns
+{{- end }}
