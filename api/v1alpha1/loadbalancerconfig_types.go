@@ -102,6 +102,11 @@ type LoadBalancerConfigVIPs struct {
 	NAT *VirtualAddress `json:"nat,omitzero"`
 }
 
+const (
+	VirtualAddressPrivate = "private"
+	VirtualAddressPublic  = "public"
+)
+
 type VirtualAddress struct {
 	// Type indicates whether the address is a public or private VIP
 	//
@@ -110,10 +115,6 @@ type VirtualAddress struct {
 	//
 	// +kubebuilder:validation:Enum=public;private
 	Type string `json:"type"`
-
-	// Family is the IP address family (IPv4 or IPv6).
-	// +kubebuilder:validation:Enum=IPv4;IPv6'
-	Family string `json:"family"`
 
 	// Address is the address in CIDR notation.
 	Address string `json:"address"`

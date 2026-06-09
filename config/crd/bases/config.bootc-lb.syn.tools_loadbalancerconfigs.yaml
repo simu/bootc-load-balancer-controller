@@ -205,12 +205,6 @@ spec:
                         address:
                           description: Address is the address in CIDR notation.
                           type: string
-                        family:
-                          description: Family is the IP address family (IPv4 or IPv6).
-                          enum:
-                          - IPv4
-                          - IPv6'
-                          type: string
                         type:
                           description: |-
                             Type indicates whether the address is a public or private VIP
@@ -223,7 +217,6 @@ spec:
                           type: string
                       required:
                       - address
-                      - family
                       - type
                       type: object
                     minItems: 1
@@ -241,12 +234,6 @@ spec:
                         address:
                           description: Address is the address in CIDR notation.
                           type: string
-                        family:
-                          description: Family is the IP address family (IPv4 or IPv6).
-                          enum:
-                          - IPv4
-                          - IPv6'
-                          type: string
                         type:
                           description: |-
                             Type indicates whether the address is a public or private VIP
@@ -259,7 +246,6 @@ spec:
                           type: string
                       required:
                       - address
-                      - family
                       - type
                       type: object
                     type: array
@@ -276,12 +262,6 @@ spec:
                       address:
                         description: Address is the address in CIDR notation.
                         type: string
-                      family:
-                        description: Family is the IP address family (IPv4 or IPv6).
-                        enum:
-                        - IPv4
-                        - IPv6'
-                        type: string
                       type:
                         description: |-
                           Type indicates whether the address is a public or private VIP
@@ -294,7 +274,6 @@ spec:
                         type: string
                     required:
                     - address
-                    - family
                     - type
                     type: object
                 required:
