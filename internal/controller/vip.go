@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
-	"reflect"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 	"go.uber.org/multierr"
@@ -25,9 +24,9 @@ type FrontendData struct {
 }
 
 type InternalIPs struct {
-	DefaultGateway netip.Addr
-	Primary        netip.Addr
-	Secondary      netip.Addr
+	DefaultGateway netip.Prefix
+	Primary        netip.Prefix
+	Secondary      netip.Prefix
 }
 
 func (r *LoadBalancerConfigReconciler) getHAProxyBackends(ctx context.Context, ls *metav1.LabelSelector) ([]Backend, error) {
@@ -65,10 +64,10 @@ func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) 
 	var errors []error
 
 	for _, address := range vips.API {
-		if addr, err := parseVIPAddr(&address); err == nil {
-			data.API = append(data.API, addr)
+		if addr, err := parseVIP(&address); err == nil {
+			data.API = append(data.API, addr.Addr())
 			if address.Type == lb.AddressTypePrivate {
-				data.Ignition = append(data.Ignition, addr)
+				data.Ignition = append(data.Ignition, addr.Addr())
 			}
 		} else {
 			errors = append(errors, err)
@@ -76,8 +75,8 @@ func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) 
 	}
 
 	for _, address := range vips.Ingress {
-		if addr, err := parseVIPAddr(&address); err == nil {
-			data.Ingress = append(data.Ingress, addr)
+		if addr, err := parseVIP(&address); err == nil {
+			data.Ingress = append(data.Ingress, addr.Addr())
 		} else {
 			errors = append(errors, err)
 		}
@@ -86,15 +85,15 @@ func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) 
 	return data, multierr.Combine(errors...)
 }
 
-func privateVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, cidr bool) ([]T, error) {
-	addrs := []T{}
+func privateVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
+	addrs := []netip.Prefix{}
 	errors := []error{}
 
 	for _, address := range vips.API {
 		if address.Type != lb.AddressTypePrivate {
 			continue
 		}
-		if a, err := parseVIP[T](&address); err == nil {
+		if a, err := parseVIP(&address); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
@@ -104,14 +103,14 @@ func privateVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, c
 		if address.Type != lb.AddressTypePrivate {
 			continue
 		}
-		if a, err := parseVIP[T](&address); err == nil {
+		if a, err := parseVIP(&address); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
 		}
 	}
 	if vips.NAT != nil && vips.NAT.Type == lb.AddressTypePrivate {
-		if a, err := parseVIP[T](vips.NAT); err == nil {
+		if a, err := parseVIP(vips.NAT); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
@@ -121,15 +120,15 @@ func privateVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, c
 	return addrs, multierr.Combine(errors...)
 }
 
-func publicVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, cidr bool) ([]T, error) {
-	addrs := []T{}
+func publicVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
+	addrs := []netip.Prefix{}
 	errors := []error{}
 
 	for _, address := range vips.API {
 		if address.Type != lb.AddressTypePublic {
 			continue
 		}
-		if a, err := parseVIP[T](&address); err == nil {
+		if a, err := parseVIP(&address); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
@@ -139,14 +138,14 @@ func publicVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, ci
 		if address.Type != lb.AddressTypePublic {
 			continue
 		}
-		if a, err := parseVIP[T](&address); err == nil {
+		if a, err := parseVIP(&address); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
 		}
 	}
 	if vips.NAT != nil && vips.NAT.Type == lb.AddressTypePublic {
-		if a, err := parseVIP[T](vips.NAT); err == nil {
+		if a, err := parseVIP(vips.NAT); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
@@ -156,31 +155,15 @@ func publicVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, ci
 	return addrs, multierr.Combine(errors...)
 }
 
-var (
-	parseVIPAddr   = parseVIP[netip.Addr]
-	parseVIPPrefix = parseVIP[netip.Prefix]
-)
-
-func parseVIP[T netip.Addr | netip.Prefix](addr *lb.VirtualAddress) (res T, err error) {
-	a, e := netip.ParsePrefix(addr.Address)
-	if e != nil {
-		err = fmt.Errorf("failed to parse VIP: %w", e)
-		return
+func parseVIP(addr *lb.VirtualAddress) (netip.Prefix, error) {
+	a, err := netip.ParsePrefix(addr.Address)
+	if err != nil {
+		return netip.Prefix{}, fmt.Errorf("failed to parse VIP: %w", err)
 	}
 	if !a.IsSingleIP() {
-		err = fmt.Errorf("address ranges not supported as VIP: %v", addr)
-		return
+		return netip.Prefix{}, fmt.Errorf("address ranges not supported as VIP: %v", addr)
 	}
-	err = nil
-	if r, ok := any(a).(T); ok {
-		return r, nil
-	} else if r, ok := any(a.Addr()).(T); ok {
-		return r, nil
-	} else {
-		err = fmt.Errorf("unable to generate requested return type: %v", reflect.TypeOf(res).String())
-		return
-	}
-
+	return a, nil
 }
 
 func (r *LoadBalancerConfigReconciler) internalIPs(lbconfig *lb.LoadBalancerConfig) (*InternalIPs, error) {
@@ -189,26 +172,47 @@ func (r *LoadBalancerConfigReconciler) internalIPs(lbconfig *lb.LoadBalancerConf
 		return nil, fmt.Errorf("failed to parse cluster network: %w", err)
 	}
 	netaddr := clusternet.Masked().Addr()
+	if !netaddr.Is4() {
+		return nil, fmt.Errorf("IPv6 cluster network isn't supported: %s", clusternet)
+	}
 	defaultGateway := netaddr.Next()
 	primaryIP := defaultGateway.Next()
 	secondaryIP := primaryIP.Next()
-	return &InternalIPs{
-		DefaultGateway: defaultGateway,
-		Primary:        primaryIP,
-		Secondary:      secondaryIP,
-	}, nil
+	defaultGatewayPrefix, e := defaultGateway.Prefix(32)
+	err = multierr.Combine(err, e)
+	primaryIPPrefix, e := primaryIP.Prefix(32)
+	err = multierr.Combine(err, e)
+	secondaryIPPrefix, e := secondaryIP.Prefix(32)
+	err = multierr.Combine(err, e)
+	if err == nil {
+		return &InternalIPs{
+			DefaultGateway: defaultGatewayPrefix,
+			Primary:        primaryIPPrefix,
+			Secondary:      secondaryIPPrefix,
+		}, nil
+	} else {
+		return nil, err
+	}
 }
 
-func (ip *InternalIPs) myInternalIP(isPrimary bool) string {
+func (ip *InternalIPs) myInternalIP(isPrimary, prefix bool) string {
+	a := ip.Secondary
 	if isPrimary {
-		return ip.Primary.String()
+		a = ip.Primary
 	}
-	return ip.Secondary.String()
+	if !prefix {
+		return a.Addr().String()
+	}
+	return a.String()
 }
 
-func (ip *InternalIPs) peerInternalIP(isPrimary bool) string {
+func (ip *InternalIPs) peerInternalIP(isPrimary, prefix bool) string {
+	a := ip.Primary
 	if isPrimary {
-		return ip.Secondary.String()
+		a = ip.Secondary
 	}
-	return ip.Primary.String()
+	if !prefix {
+		return a.Addr().String()
+	}
+	return a.String()
 }

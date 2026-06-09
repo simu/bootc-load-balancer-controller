@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"net/netip"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -12,7 +11,7 @@ import (
 func (r *LoadBalancerConfigReconciler) RenderKeepalivedDummyNMConnection(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
 	l := logf.FromContext(ctx)
 
-	vips, err := publicVIPs[netip.Prefix](&lbconfig.Spec.VirtualAddresses, false)
+	vips, err := publicVIPs(&lbconfig.Spec.VirtualAddresses)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare public IPv4 VIPs: %w", err)
 	}

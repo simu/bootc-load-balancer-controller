@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"net/netip"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -20,7 +19,7 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 
 	internalIPs, err := r.internalIPs(lbconfig)
 	if err != nil {
-		return "", fmt.Errorf("failed to compute internal IPs: %w", err)
+		return "", fmt.Errorf("failed to compute internal VIPs: %w", err)
 	}
 
 	prio := 100
@@ -28,25 +27,21 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 		prio = 200
 	}
 
-	vips, err := privateVIPs[netip.Prefix](&lbconfig.Spec.VirtualAddresses, false)
+	vips, err := privateVIPs(&lbconfig.Spec.VirtualAddresses)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare Keepalived VIPs: %w", err)
 	}
 
 	if lbconfig.Spec.VirtualAddresses.NAT != nil {
-		if gw, err := internalIPs.DefaultGateway.Prefix(32); err == nil {
-			vips = append(vips, gw)
-		} else {
-			return "", fmt.Errorf("failed to prepare default gateway VIP")
-		}
+		vips = append(vips, internalIPs.DefaultGateway)
 	}
 
 	l.Info("Rendering keepalived config", "interface", r.KeepalivedConfig.Interface, "priority", prio)
 	return renderTemplate(lbconfig.Spec.Distribution, "keepalived.conf.tmpl", map[string]any{
 		"Interface": r.KeepalivedConfig.Interface,
 		"Priority":  prio,
-		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
-		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary),
+		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary, false),
+		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary, false),
 		"VIPs":      vips,
 	})
 }
