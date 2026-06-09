@@ -92,6 +92,10 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	//TODO(sg): firewall rules
 
+	//TODO(sg): add public VIPs to dummy interface
+
+	//TODO(sg): decide who is responsible to apply internal IP to internal iface
+
 	return ctrl.Result{}, multierr.Combine(errors...)
 }
 

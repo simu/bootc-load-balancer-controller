@@ -80,7 +80,9 @@ func main() {
 		"If set, this LB will become the primary instance")
 	flag.StringVar(&publicInterface, "public-interface", detectedPublicInterface,
 		"Configure the LB's public interface. By default, the controller will pick the interface with the default route as the public interface")
-	// TODO(sg): can we do something smarter here?
+	// TODO(sg): can we do something smarter here? Maybe pass cluster
+	// network as flag instaed of through CRD -> I assume netmon can find
+	// the iface for a given CIDR
 	flag.StringVar(&keepalivedInterface, "keepalived-interface", "ens4",
 		"Configure the LB's keepalived interface. This interface must be in a network that allows VRRP traffic.")
 	flag.StringVar(&configRoot, "config-root", "/",
