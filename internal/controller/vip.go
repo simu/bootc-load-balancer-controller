@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"slices"
+
+	"golang.org/x/exp/maps"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 	"go.uber.org/multierr"
@@ -59,15 +62,17 @@ func (r *LoadBalancerConfigReconciler) getHAProxyBackends(ctx context.Context, l
 }
 
 func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) {
-	var data FrontendData
+	api := map[netip.Addr]struct{}{}
+	ignition := map[netip.Addr]struct{}{}
+	ingress := map[netip.Addr]struct{}{}
 
 	var errors []error
 
 	for _, address := range vips.API {
 		if addr, err := parseVIP(&address); err == nil {
-			data.API = append(data.API, addr.Addr())
+			api[addr.Addr()] = struct{}{}
 			if address.Type == lb.AddressTypePrivate {
-				data.Ignition = append(data.Ignition, addr.Addr())
+				ignition[addr.Addr()] = struct{}{}
 			}
 		} else {
 			errors = append(errors, err)
@@ -76,17 +81,25 @@ func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) 
 
 	for _, address := range vips.Ingress {
 		if addr, err := parseVIP(&address); err == nil {
-			data.Ingress = append(data.Ingress, addr.Addr())
+			ingress[addr.Addr()] = struct{}{}
 		} else {
 			errors = append(errors, err)
 		}
 	}
 
+	data := FrontendData{
+		API:      maps.Keys(api),
+		Ignition: maps.Keys(ignition),
+		Ingress:  maps.Keys(ingress),
+	}
+	sortIPs(data.API)
+	sortIPs(data.Ignition)
+	sortIPs(data.Ingress)
 	return data, multierr.Combine(errors...)
 }
 
 func privateVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
-	addrs := []netip.Prefix{}
+	addrs := map[netip.Prefix]struct{}{}
 	errors := []error{}
 
 	for _, address := range vips.API {
@@ -94,7 +107,7 @@ func privateVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
 			continue
 		}
 		if a, err := parseVIP(&address); err == nil {
-			addrs = append(addrs, a)
+			addrs[a] = struct{}{}
 		} else {
 			errors = append(errors, err)
 		}
@@ -104,24 +117,26 @@ func privateVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
 			continue
 		}
 		if a, err := parseVIP(&address); err == nil {
-			addrs = append(addrs, a)
+			addrs[a] = struct{}{}
 		} else {
 			errors = append(errors, err)
 		}
 	}
 	if vips.NAT != nil && vips.NAT.Type == lb.AddressTypePrivate {
 		if a, err := parseVIP(vips.NAT); err == nil {
-			addrs = append(addrs, a)
+			addrs[a] = struct{}{}
 		} else {
 			errors = append(errors, err)
 		}
 	}
 
-	return addrs, multierr.Combine(errors...)
+	retAddrs := maps.Keys(addrs)
+	sortPrefixes(retAddrs)
+	return retAddrs, multierr.Combine(errors...)
 }
 
 func publicVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
-	addrs := []netip.Prefix{}
+	addrs := map[netip.Prefix]struct{}{}
 	errors := []error{}
 
 	for _, address := range vips.API {
@@ -129,7 +144,7 @@ func publicVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
 			continue
 		}
 		if a, err := parseVIP(&address); err == nil {
-			addrs = append(addrs, a)
+			addrs[a] = struct{}{}
 		} else {
 			errors = append(errors, err)
 		}
@@ -139,20 +154,22 @@ func publicVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
 			continue
 		}
 		if a, err := parseVIP(&address); err == nil {
-			addrs = append(addrs, a)
+			addrs[a] = struct{}{}
 		} else {
 			errors = append(errors, err)
 		}
 	}
 	if vips.NAT != nil && vips.NAT.Type == lb.AddressTypePublic {
 		if a, err := parseVIP(vips.NAT); err == nil {
-			addrs = append(addrs, a)
+			addrs[a] = struct{}{}
 		} else {
 			errors = append(errors, err)
 		}
 	}
 
-	return addrs, multierr.Combine(errors...)
+	retAddrs := maps.Keys(addrs)
+	sortPrefixes(retAddrs)
+	return retAddrs, multierr.Combine(errors...)
 }
 
 func parseVIP(addr *lb.VirtualAddress) (netip.Prefix, error) {
@@ -215,4 +232,16 @@ func (ip *InternalIPs) peerInternalIP(isPrimary, prefix bool) string {
 		return a.Addr().String()
 	}
 	return a.String()
+}
+
+func sortIPs(ips []netip.Addr) {
+	slices.SortFunc(ips, func(a, b netip.Addr) int {
+		return a.Compare(b)
+	})
+}
+
+func sortPrefixes(pfx []netip.Prefix) {
+	slices.SortFunc(pfx, func(a, b netip.Prefix) int {
+		return a.Addr().Compare(b.Addr())
+	})
 }
