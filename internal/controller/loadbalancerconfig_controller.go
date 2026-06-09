@@ -59,6 +59,9 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	keepalived, err := r.RenderKeepalivedConfig(ctx, &lbconfig)
 	l.Info("Keepalived config", "config", keepalived, "err", err)
 
+	conntrackd, err := r.RenderConntrackdConfig(ctx, &lbconfig)
+	l.Info("Keepalived config", "config", conntrackd, "err", err)
+
 	return ctrl.Result{}, nil
 }
 

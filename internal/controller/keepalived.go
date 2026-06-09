@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"net/netip"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -24,12 +23,8 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 	}
 
 	prio := 100
-	srcIP := internalIPs.Secondary.String()
-	dstIP := internalIPs.Primary.String()
 	if r.KeepalivedConfig.IsPrimary {
 		prio = 200
-		srcIP = internalIPs.Primary.String()
-		dstIP = internalIPs.Secondary.String()
 	}
 
 	vips, err := keepalivedVIPs(&lbconfig.Spec.VirtualAddresses)
@@ -45,30 +40,8 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 	return renderTemplate(lbconfig.Spec.Distribution, "keepalived.conf.tmpl", map[string]any{
 		"Interface": r.KeepalivedConfig.Interface,
 		"Priority":  prio,
-		"SrcIP":     srcIP,
-		"DstIP":     dstIP,
+		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
+		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary),
 		"VIPs":      vips,
 	})
-}
-
-type InternalIPs struct {
-	DefaultGateway netip.Addr
-	Primary        netip.Addr
-	Secondary      netip.Addr
-}
-
-func (r *LoadBalancerConfigReconciler) internalIPs(lbconfig *lb.LoadBalancerConfig) (*InternalIPs, error) {
-	clusternet, err := netip.ParsePrefix(lbconfig.Spec.ClusterNetwork)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse cluster network: %w", err)
-	}
-	netaddr := clusternet.Masked().Addr()
-	defaultGateway := netaddr.Next()
-	primaryIP := defaultGateway.Next()
-	secondaryIP := primaryIP.Next()
-	return &InternalIPs{
-		DefaultGateway: defaultGateway,
-		Primary:        primaryIP,
-		Secondary:      secondaryIP,
-	}, nil
 }

@@ -23,6 +23,12 @@ type FrontendData struct {
 	Ingress  []string
 }
 
+type InternalIPs struct {
+	DefaultGateway netip.Addr
+	Primary        netip.Addr
+	Secondary      netip.Addr
+}
+
 func (r *LoadBalancerConfigReconciler) getHAProxyBackends(ctx context.Context, ls *metav1.LabelSelector) ([]Backend, error) {
 	nodeSelector, err := metav1.LabelSelectorAsSelector(ls)
 	if err != nil {
@@ -125,4 +131,34 @@ func addrFromVIP(addr *lb.VirtualAddress) (string, error) {
 		return "", fmt.Errorf("address ranges not supported for API VIP: %v", addr)
 	}
 	return a.Addr().String(), nil
+}
+
+func (r *LoadBalancerConfigReconciler) internalIPs(lbconfig *lb.LoadBalancerConfig) (*InternalIPs, error) {
+	clusternet, err := netip.ParsePrefix(lbconfig.Spec.ClusterNetwork)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse cluster network: %w", err)
+	}
+	netaddr := clusternet.Masked().Addr()
+	defaultGateway := netaddr.Next()
+	primaryIP := defaultGateway.Next()
+	secondaryIP := primaryIP.Next()
+	return &InternalIPs{
+		DefaultGateway: defaultGateway,
+		Primary:        primaryIP,
+		Secondary:      secondaryIP,
+	}, nil
+}
+
+func (ip *InternalIPs) myInternalIP(isPrimary bool) string {
+	if isPrimary {
+		return ip.Primary.String()
+	}
+	return ip.Secondary.String()
+}
+
+func (ip *InternalIPs) peerInternalIP(isPrimary bool) string {
+	if isPrimary {
+		return ip.Secondary.String()
+	}
+	return ip.Primary.String()
 }
