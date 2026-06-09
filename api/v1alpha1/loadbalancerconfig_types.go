@@ -103,8 +103,8 @@ type LoadBalancerConfigVIPs struct {
 }
 
 const (
-	VirtualAddressPrivate = "private"
-	VirtualAddressPublic  = "public"
+	AddressTypePrivate = "private"
+	AddressTypePublic  = "public"
 )
 
 type VirtualAddress struct {

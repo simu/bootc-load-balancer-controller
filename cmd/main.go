@@ -19,6 +19,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"tailscale.com/net/netmon"
+
 	configv1alpha1 "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 	"github.com/projectsyn/bootc-load-balancer-controller/internal/controller"
 	// +kubebuilder:scaffold:imports
@@ -45,6 +47,16 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var isPrimary bool
+	var publicInterface string
+	var keepalivedInterface string
+
+	detectedPublicInterface, err := netmon.DefaultRouteInterface()
+	if err != nil {
+		setupLog.Error(err, "Failed to start manager")
+		os.Exit(1)
+	}
+
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -63,6 +75,13 @@ func main() {
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.BoolVar(&isPrimary, "primary", false,
+		"If set, this LB will become the primary instance")
+	flag.StringVar(&publicInterface, "public-interface", detectedPublicInterface,
+		"Configure the LB's public interface. By default, the controller will pick the interface with the default route as the public interface")
+	// TODO(sg): can we do something smarter here?
+	flag.StringVar(&keepalivedInterface, "keepalived-interface", "ens4",
+		"Configure the LB's keepalived interface. This interface must be in a network that allows VRRP traffic.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -165,6 +184,10 @@ func main() {
 	if err := (&controller.LoadBalancerConfigReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		KeepalivedConfig: controller.KeepalivedConfig{
+			Interface: keepalivedInterface,
+			IsPrimary: isPrimary,
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "loadbalancerconfig")
 		os.Exit(1)

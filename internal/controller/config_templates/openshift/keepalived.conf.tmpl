@@ -1,0 +1,32 @@
+global_defs {
+  snmp_socket unix:/var/agentx/master
+  vrrp_notify_fifo /var/run/keepalived.floaty.fifo
+  vrrp_notify_fifo_script /usr/sbin/floaty-global.wrapper.sh
+}
+
+vrrp_instance lb {
+  interface                 {{ .Interface }}
+  state                     BACKUP
+  virtual_router_id         100
+  priority                  {{ .Priority }}
+  advert_int                3
+  garp_master_delay         5
+
+  garp_master_refresh       30
+
+  authentication {
+    auth_type PASS
+    auth_pass insec_0
+  }
+
+  virtual_ipaddress {
+{{- range $vip := .VIPs }}
+    {{ $vip }} dev {{ $.Interface }}
+{{- end }}
+  }
+
+  unicast_src_ip {{ .SrcIP }}
+  unicast_peer {
+    {{ .DstIP }}
+  }
+}

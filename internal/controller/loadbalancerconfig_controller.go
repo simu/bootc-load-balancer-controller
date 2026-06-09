@@ -18,6 +18,9 @@ import (
 type LoadBalancerConfigReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	// Keepalived
+	KeepalivedConfig KeepalivedConfig
 }
 
 // +kubebuilder:rbac:groups=config.bootc-lb.syn.tools,resources=loadbalancerconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -52,6 +55,9 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	haproxyIngress, err := r.RenderHAProxyIngressConfig(ctx, &lbconfig)
 	l.Info("HAProxy ingress config", "config", haproxyIngress, "err", err)
+
+	keepalived, err := r.RenderKeepalivedConfig(ctx, &lbconfig)
+	l.Info("Keepalived config", "config", keepalived, "err", err)
 
 	return ctrl.Result{}, nil
 }
