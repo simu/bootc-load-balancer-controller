@@ -1,0 +1,8 @@
+provider: cloudscale
+cloudscale:
+  token: "{{ .Token }}"
+lock-file-template: "/var/run/keepalived.floaty.%s.lock"
+managed-addresses:
+{{- range $vip := .VIPs }}
+- {{ $vip }}
+{{- end }}

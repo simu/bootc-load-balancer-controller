@@ -15,8 +15,8 @@ var tFuncs = template.FuncMap{
 	"idx1": func(i int) int { return i + 1 },
 }
 
-func renderTemplate(distribution, templateName string, templateData map[string]any) (string, error) {
-	tpath := filepath.Join("config_templates", distribution, templateName)
+func renderTemplate(prefix, templateName string, templateData map[string]any) (string, error) {
+	tpath := filepath.Join("config_templates", prefix, templateName)
 
 	t, err := template.New(templateName).Funcs(tFuncs).ParseFS(configTemplates, tpath)
 	if err != nil {

@@ -99,7 +99,7 @@ spec:
                   configured.
                 enum:
                 - cloudscale
-                - Exoscale
+                - exoscale
                 type: string
               cloudCredentials:
                 description: |-

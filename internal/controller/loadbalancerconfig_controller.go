@@ -5,12 +5,9 @@ import (
 
 	"go.uber.org/multierr"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	corev1 "k8s.io/api/core/v1"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 )
@@ -47,13 +44,6 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	l.Info("Reconciling LB config", "cloud", lbconfig.Spec.Cloud, "distribution", lbconfig.Spec.Distribution)
 
-	var credentialSecret corev1.Secret
-	if err := r.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: lbconfig.Spec.CloudCredentials.Name}, &credentialSecret); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	l.Info("Cloud credentials secret", "token", credentialSecret.Data["token"])
-
 	errors := []error{}
 
 	if haproxyApi, err := r.RenderHAProxyAPIConfig(ctx, &lbconfig); err == nil {
@@ -80,7 +70,14 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		errors = append(errors, err)
 	}
 
-	//TODO(sg): floaty
+	if floaty, err := r.RenderFloatyConfig(ctx, &lbconfig); err == nil {
+		l.Info("Floaty config", "config", floaty, "error", err)
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, FloatyConfigFile, floaty); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
 
 	if conntrackd, err := r.RenderConntrackdConfig(ctx, &lbconfig); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ConntrackdConfigFile, conntrackd); err != nil {

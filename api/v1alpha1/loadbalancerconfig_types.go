@@ -26,7 +26,7 @@ type LoadBalancerConfigSpec struct {
 	// Cloud provider for which the loadbalancers should be configured.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=cloudscale;Exoscale
+	// +kubebuilder:validation:Enum=cloudscale;exoscale
 	Cloud string `json:"cloud"`
 
 	// CloudCredentials references a secret which contains credentials for
