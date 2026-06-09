@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 
+	"go.uber.org/multierr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -18,6 +19,9 @@ import (
 type LoadBalancerConfigReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	// General
+	ConfigRoot string
 
 	// Keepalived
 	KeepalivedConfig KeepalivedConfig
@@ -50,19 +54,45 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	l.Info("Cloud credentials secret", "token", credentialSecret.Data["token"])
 
-	haproxyApi, err := r.RenderHAProxyAPIConfig(ctx, &lbconfig)
-	l.Info("HAProxy API server config", "config", haproxyApi, "err", err)
+	errors := []error{}
 
-	haproxyIngress, err := r.RenderHAProxyIngressConfig(ctx, &lbconfig)
-	l.Info("HAProxy ingress config", "config", haproxyIngress, "err", err)
+	if haproxyApi, err := r.RenderHAProxyAPIConfig(ctx, &lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, HAProxyAPIConfigFile, haproxyApi); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
 
-	keepalived, err := r.RenderKeepalivedConfig(ctx, &lbconfig)
-	l.Info("Keepalived config", "config", keepalived, "err", err)
+	if haproxyIngress, err := r.RenderHAProxyIngressConfig(ctx, &lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, HAProxyIngressConfigFile, haproxyIngress); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
 
-	conntrackd, err := r.RenderConntrackdConfig(ctx, &lbconfig)
-	l.Info("Keepalived config", "config", conntrackd, "err", err)
+	if keepalived, err := r.RenderKeepalivedConfig(ctx, &lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedConfigFile, keepalived); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
 
-	return ctrl.Result{}, nil
+	//TODO(sg): floaty
+
+	if conntrackd, err := r.RenderConntrackdConfig(ctx, &lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ConntrackdConfigFile, conntrackd); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
+
+	//TODO(sg): firewall rules
+
+	return ctrl.Result{}, multierr.Combine(errors...)
 }
 
 // SetupWithManager sets up the controller with the Manager.

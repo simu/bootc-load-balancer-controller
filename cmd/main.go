@@ -50,6 +50,7 @@ func main() {
 	var isPrimary bool
 	var publicInterface string
 	var keepalivedInterface string
+	var configRoot string
 
 	detectedPublicInterface, err := netmon.DefaultRouteInterface()
 	if err != nil {
@@ -82,6 +83,9 @@ func main() {
 	// TODO(sg): can we do something smarter here?
 	flag.StringVar(&keepalivedInterface, "keepalived-interface", "ens4",
 		"Configure the LB's keepalived interface. This interface must be in a network that allows VRRP traffic.")
+	flag.StringVar(&configRoot, "config-root", "/",
+		"Base directory for config files. Defaults to the LB's root directory")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -182,8 +186,9 @@ func main() {
 	}
 
 	if err := (&controller.LoadBalancerConfigReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		ConfigRoot: configRoot,
 		KeepalivedConfig: controller.KeepalivedConfig{
 			Interface: keepalivedInterface,
 			IsPrimary: isPrimary,
