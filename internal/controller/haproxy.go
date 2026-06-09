@@ -1,13 +1,9 @@
 package controller
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/netip"
-	"text/template"
-
-	"embed"
 
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
@@ -18,8 +14,45 @@ import (
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 )
 
-//go:embed haproxy.*.tmpl
-var haproxy_configs embed.FS
+func (r *LoadBalancerConfigReconciler) RenderHAProxyAPIConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
+	l := logf.FromContext(ctx)
+
+	templateData, err := r.haproxyTemplateData(ctx, lbconfig)
+	if err != nil {
+		return "", err
+	}
+
+	l.Info("Rendering API server HAProxy config", "lbconfig", lbconfig.Name)
+	return renderTemplate(lbconfig.Spec.Distribution, "haproxy.ingress.cfg.tmpl", templateData)
+}
+
+func (r *LoadBalancerConfigReconciler) RenderHAProxyIngressConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
+	l := logf.FromContext(ctx)
+
+	templateData, err := r.haproxyTemplateData(ctx, lbconfig)
+	if err != nil {
+		return "", err
+	}
+
+	l.Info("Rendering ingress HAProxy config", "lbconfig", lbconfig.Name)
+	return renderTemplate(lbconfig.Spec.Distribution, "haproxy.ingress.cfg.tmpl", templateData)
+}
+
+func (r *LoadBalancerConfigReconciler) haproxyTemplateData(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (map[string]any, error) {
+	frontends, err := getFrontends(&lbconfig.Spec.VirtualAddresses)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare ingress HAProxy frontends: %w", err)
+	}
+
+	backends, err := r.getBackends(ctx, &lbconfig.Spec.APIBackend.NodeSelector)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare ingress HAProxy backends: %w", err)
+	}
+	return map[string]any{
+		"Frontends": frontends,
+		"Backends":  backends,
+	}, nil
+}
 
 type Backend struct {
 	Name    string
@@ -64,15 +97,15 @@ type FrontendData struct {
 func addrFromVIP(addr *lb.VirtualAddress) (string, error) {
 	a, err := netip.ParsePrefix(addr.Address)
 	if err != nil {
-		return "", fmt.Errorf("Failed to parse VIP: %w", err)
+		return "", fmt.Errorf("failed to parse VIP: %w", err)
 	}
 	if !a.IsSingleIP() {
-		return "", fmt.Errorf("Address ranges not supported for API VIP: %v", addr)
+		return "", fmt.Errorf("address ranges not supported for API VIP: %v", addr)
 	}
 	return a.Addr().String(), nil
 }
 
-func (r *LoadBalancerConfigReconciler) getFrontends(ctx context.Context, vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) {
+func getFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) {
 	var data FrontendData
 
 	var errors []error
@@ -90,41 +123,11 @@ func (r *LoadBalancerConfigReconciler) getFrontends(ctx context.Context, vips *l
 
 	for _, address := range vips.Ingress {
 		if addr, err := addrFromVIP(&address); err == nil {
-			data.Ingress = append(data.API, addr)
+			data.Ingress = append(data.Ingress, addr)
 		} else {
 			errors = append(errors, err)
 		}
 	}
 
 	return data, multierr.Combine(errors...)
-}
-
-func (r *LoadBalancerConfigReconciler) RenderHAProxyConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
-	l := logf.FromContext(ctx)
-
-	t, err := template.ParseFS(haproxy_configs, "haproxy.api.cfg.tmpl")
-	if err != nil {
-		return "", fmt.Errorf("Failed to parse haproxy config template: %w", err)
-	}
-
-	frontends, err := r.getFrontends(ctx, &lbconfig.Spec.VirtualAddresses)
-	if err != nil {
-		return "", fmt.Errorf("failed to prepare API server HAProxy frontends: %w", err)
-	}
-
-	backends, err := r.getBackends(ctx, &lbconfig.Spec.APIBackend.NodeSelector)
-	if err != nil {
-		return "", fmt.Errorf("failed to prepare API server HAProxy backends: %w", err)
-	}
-
-	l.Info("Rendering API server HAProxy config", "lbconfig", lbconfig.Name)
-	var buf bytes.Buffer
-	err = t.Execute(&buf, map[string]any{
-		"Frontends": frontends,
-		"Backends":  backends,
-	})
-	if err != nil {
-		return "", fmt.Errorf("Error while executing API server HAProxy template: %w", err)
-	}
-	return buf.String(), nil
 }

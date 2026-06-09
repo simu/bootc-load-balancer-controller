@@ -1,0 +1,25 @@
+frontend fe-router-http
+  mode tcp
+  default_backend be-router-http
+{{- range .Frontends.Ingress }}
+  bind {{ . }}:80
+{{- end }}
+
+frontend fe-router-https
+  mode tcp
+  default_backend be-router-https
+{{- range .Frontends.Ingress }}
+  bind {{ . }}:443
+{{- end }}
+
+backend be-router-http
+  option httpchk GET /healthz/ready
+{{- range $index, $backend := .Backends }}
+  server server_{{ $index }} {{ $backend.Address }}:80 check port 1936 check-ssl verify none resolvers localdns send-proxy-v2
+{{- end }}
+
+backend be-router-https
+  option httpchk GET /healthz/ready
+{{- range $index, $backend := .Backends }}
+  server server_{{ $index }} {{ $backend.Address }}:443 check port 1936 check-ssl verify none resolvers localdns send-proxy-v2
+{{- end }}
