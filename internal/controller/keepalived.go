@@ -27,7 +27,7 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 		prio = 200
 	}
 
-	vips, err := keepalivedVIPs(&lbconfig.Spec.VirtualAddresses)
+	vips, err := privateVIPs(&lbconfig.Spec.VirtualAddresses, false)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare Keepalived VIPs: %w", err)
 	}

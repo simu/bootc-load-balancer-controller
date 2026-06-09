@@ -17,6 +17,11 @@ const (
 	HAProxyIngressConfigFile = "/etc/haproxy/conf.d/ingress.cfg"
 	KeepalivedConfigFile     = "/etc/keepalived/keepalived.conf"
 
+	KeepalivedDummyNMConnectionFile = "/etc/NetworkManager/system-connections/keepalived.nmconnection"
+
+	PublicNMConnectionFile  = "/etc/NetworkManager/system-connections/public.nmconnection"
+	PrivateNMConnectionFile = "/etc/NetworkManager/system-connections/private.nmconnection"
+
 	fileHeader = "# Managed by bootc-loadbalancer-controller\n"
 )
 
@@ -30,7 +35,7 @@ func (r *LoadBalancerConfigReconciler) WriteConfig(ctx context.Context, lbconfig
 		return fmt.Errorf("failed to create director for config file: %w", err)
 	}
 
-	cfgfile, err := os.OpenFile(cfgfilepath, os.O_RDWR|os.O_CREATE, 0644)
+	cfgfile, err := os.OpenFile(cfgfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create or open config file: %w", err)
 	}

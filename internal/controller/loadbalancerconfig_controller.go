@@ -92,7 +92,13 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	//TODO(sg): firewall rules
 
-	//TODO(sg): add public VIPs to dummy interface
+	if keepalivedNMConn, err := r.RenderKeepalivedDummyNMConnection(ctx, &lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedDummyNMConnectionFile, keepalivedNMConn); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
 
 	//TODO(sg): decide who is responsible to apply internal IP to internal iface
 

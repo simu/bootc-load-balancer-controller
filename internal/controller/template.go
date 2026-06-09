@@ -11,10 +11,14 @@ import (
 //go:embed config_templates/*
 var configTemplates embed.FS
 
+var tFuncs = template.FuncMap{
+	"idx1": func(i int) int { return i + 1 },
+}
+
 func renderTemplate(distribution, templateName string, templateData map[string]any) (string, error) {
 	tpath := filepath.Join("config_templates", distribution, templateName)
 
-	t, err := template.ParseFS(configTemplates, tpath)
+	t, err := template.New(templateName).Funcs(tFuncs).ParseFS(configTemplates, tpath)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse config template %s: %w", tpath, err)
 	}

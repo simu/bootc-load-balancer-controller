@@ -1,0 +1,18 @@
+[connection]
+id=keepalived
+type=dummy
+interface-name=keepalived
+
+[dummy]
+
+[ipv4]
+method=manual
+{{- range $index, $vip := .VIPs4 }}
+address{{ idx1 $index }}={{ $vip }}
+{{- end }}
+
+[ipv6]
+method=manual
+{{- range $index, $vip := .VIPs6 }}
+address{{ idx1 $index }}={{ $vip }}
+{{- end }}
