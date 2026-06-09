@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"net"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,46 +36,28 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedDummyNMConnection(ctx con
 func (r *LoadBalancerConfigReconciler) RenderPublicNMConnection(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
 	l := logf.FromContext(ctx)
 
-	macAddr := ""
-	ifList, err := net.Interfaces()
+	macAddress, err := macAddressForInterface(r.PublicInterface)
 	if err != nil {
-		return "", fmt.Errorf("fetching interfaces: %w", err)
-	}
-	for _, iface := range ifList {
-		if iface.Name == r.PublicInterface {
-			macAddr = iface.HardwareAddr.String()
-		}
-	}
-	if macAddr == "" {
-		return "", fmt.Errorf("failed to find MAC address for interface '%s'", r.PublicInterface)
+		return "", err
 	}
 
 	l.Info("Rendering NetworkManager public interface config", "interface", r.PublicInterface)
 	return renderTemplate("", "public.nmconnection.tmpl", map[string]any{
-		"MACAddress": macAddr,
+		"MACAddress": macAddress,
 	})
 }
 
 func (r *LoadBalancerConfigReconciler) RenderClusterNetNMConnection(ctx context.Context) (string, error) {
 	l := logf.FromContext(ctx)
 
-	clusterIface, err := r.ClusterNetworkInterface(ctx)
+	clusterInterface, err := r.ClusterNetworkInterface(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	macAddr := ""
-	ifList, err := net.Interfaces()
+	macAddress, err := macAddressForInterface(clusterInterface)
 	if err != nil {
-		return "", fmt.Errorf("fetching interfaces: %w", err)
-	}
-	for _, iface := range ifList {
-		if iface.Name == clusterIface {
-			macAddr = iface.HardwareAddr.String()
-		}
-	}
-	if macAddr == "" {
-		return "", fmt.Errorf("failed to find MAC address for interface '%s'", clusterIface)
+		return "", err
 	}
 
 	internalIPs, err := r.internalIPs()
@@ -86,7 +67,7 @@ func (r *LoadBalancerConfigReconciler) RenderClusterNetNMConnection(ctx context.
 
 	l.Info("Rendering NetworkManager cluster network interface config")
 	return renderTemplate("", "cluster-net.nmconnection.tmpl", map[string]any{
-		"MACAddress": macAddr,
+		"MACAddress": macAddress,
 		"IPAddress":  internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
 	})
 }

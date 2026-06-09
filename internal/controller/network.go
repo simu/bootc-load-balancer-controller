@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -28,4 +29,21 @@ func (r *LoadBalancerConfigReconciler) ClusterNetworkInterface(ctx context.Conte
 		return "", fmt.Errorf("failed to find interface for cluster network '%s'", r.ClusterNetwork)
 	}
 	return clusterIface, nil
+}
+
+func macAddressForInterface(interfaceName string) (string, error) {
+	macAddress := ""
+	ifList, err := net.Interfaces()
+	if err != nil {
+		return "", fmt.Errorf("fetching interfaces: %w", err)
+	}
+	for _, iface := range ifList {
+		if iface.Name == interfaceName {
+			macAddress = iface.HardwareAddr.String()
+		}
+	}
+	if macAddress == "" {
+		return "", fmt.Errorf("failed to find MAC address for interface '%s'", interfaceName)
+	}
+	return macAddress, nil
 }
