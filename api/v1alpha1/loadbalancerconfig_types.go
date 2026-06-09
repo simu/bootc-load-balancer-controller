@@ -46,17 +46,6 @@ type LoadBalancerConfigSpec struct {
 	// +required
 	VirtualAddresses LoadBalancerConfigVIPs `json:"virtualAddresses"`
 
-	// ClusterNetwork defines the CIDR of the private network in which the
-	// cluster nodes are running.
-	//
-	// The LBs will allocate IPs `.1`, `.2` and `.3` in this network.
-	//
-	// `.1` will be the default gateway IP.
-	// `.2` and `.3` will be additional IPs for the two LB instances.
-	//
-	// +required
-	ClusterNetwork string `json:"clusterNetwork"`
-
 	// Kubernetes API server backend config.
 	//
 	// +required

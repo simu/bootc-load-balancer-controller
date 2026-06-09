@@ -13,16 +13,19 @@ import (
 )
 
 type KeepalivedConfig struct {
-	Interface string
 	IsPrimary bool
 }
 
 func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
 	l := logf.FromContext(ctx)
 
-	internalIPs, err := r.internalIPs(lbconfig)
+	internalIPs, err := r.internalIPs()
 	if err != nil {
 		return "", fmt.Errorf("failed to compute internal VIPs: %w", err)
+	}
+	clusterInterface, err := r.ClusterNetworkInterface(ctx)
+	if err != nil {
+		return "", err
 	}
 
 	prio := 100
@@ -44,9 +47,9 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 		return "", fmt.Errorf("failed to prepare Keepalived VIPs: %w", err)
 	}
 
-	l.Info("Rendering keepalived config", "interface", r.KeepalivedConfig.Interface, "priority", prio)
+	l.Info("Rendering keepalived config", "interface", clusterInterface, "priority", prio)
 	return renderTemplate(lbconfig.Spec.Distribution, "keepalived.conf.tmpl", map[string]any{
-		"Interface": r.KeepalivedConfig.Interface,
+		"Interface": clusterInterface,
 		"Priority":  prio,
 		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
 		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary),

@@ -187,20 +187,15 @@ func parseVIP(addr *lb.VirtualAddress) (netip.Prefix, error) {
 	return a, nil
 }
 
-func (r *LoadBalancerConfigReconciler) internalIPs(lbconfig *lb.LoadBalancerConfig) (*InternalIPs, error) {
-	clusternet, err := netip.ParsePrefix(lbconfig.Spec.ClusterNetwork)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse cluster network: %w", err)
-	}
-	netaddr := clusternet.Masked().Addr()
+func (r *LoadBalancerConfigReconciler) internalIPs() (*InternalIPs, error) {
+	netaddr := r.ClusterNetwork.Masked().Addr()
 	if !netaddr.Is4() {
-		return nil, fmt.Errorf("IPv6 cluster network isn't supported: %s", clusternet)
+		return nil, fmt.Errorf("IPv6 cluster network isn't supported: %s", r.ClusterNetwork)
 	}
 	defaultGateway := netaddr.Next()
 	primaryIP := defaultGateway.Next()
 	secondaryIP := primaryIP.Next()
 	return &InternalIPs{
-		ClusterNetwork: clusternet,
 		DefaultGateway: defaultGateway,
 		Primary:        primaryIP,
 		Secondary:      secondaryIP,

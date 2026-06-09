@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"net/netip"
 	"time"
 
 	"go.uber.org/multierr"
@@ -24,6 +25,7 @@ type LoadBalancerConfigReconciler struct {
 	// General
 	ConfigRoot      string
 	PublicInterface string
+	ClusterNetwork  netip.Prefix
 
 	// Keepalived
 	KeepalivedConfig KeepalivedConfig
@@ -102,7 +104,7 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		errors = append(errors, err)
 	}
 
-	if clusterNetNMConn, err := r.RenderClusterNetNMConnection(ctx, &lbconfig); err == nil {
+	if clusterNetNMConn, err := r.RenderClusterNetNMConnection(ctx); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ClusterNetworkNMConnectionFile, clusterNetNMConn); err != nil {
 			errors = append(errors, err)
 		}

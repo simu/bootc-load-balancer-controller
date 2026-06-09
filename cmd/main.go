@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
+	"net/netip"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -49,7 +51,7 @@ func main() {
 	var enableHTTP2 bool
 	var isPrimary bool
 	var publicInterface string
-	var keepalivedInterface string
+	var clusterNetwork string
 	var configRoot string
 
 	detectedPublicInterface, err := netmon.DefaultRouteInterface()
@@ -80,11 +82,8 @@ func main() {
 		"If set, this LB will become the primary instance")
 	flag.StringVar(&publicInterface, "public-interface", detectedPublicInterface,
 		"Configure the LB's public interface. By default, the controller will pick the interface with the default route as the public interface")
-	// TODO(sg): can we do something smarter here? Maybe pass cluster
-	// network as flag instaed of through CRD -> I assume netmon can find
-	// the iface for a given CIDR
-	flag.StringVar(&keepalivedInterface, "keepalived-interface", "ens4",
-		"Configure the LB's keepalived interface. This interface must be in a network that allows VRRP traffic.")
+	flag.StringVar(&clusterNetwork, "cluster-network", "172.18.200.0/24",
+		"Configure the LB's cluster network CIDR. This network must allow VRRP traffic.")
 	flag.StringVar(&configRoot, "config-root", "/",
 		"Base directory for config files. Defaults to the LB's root directory")
 
@@ -187,14 +186,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	clusterNet, err := netip.ParsePrefix(clusterNetwork)
+	if err != nil {
+		setupLog.Error(err, "Failed to parse cluster network as CIDR")
+		os.Exit(1)
+	}
+	if !clusterNet.Masked().Addr().Is4() {
+		err = fmt.Errorf("IPv6 cluster network isn't supported: '%s'", clusterNet)
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
+
 	if err := (&controller.LoadBalancerConfigReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 
 		ConfigRoot:      configRoot,
 		PublicInterface: publicInterface,
+		ClusterNetwork:  clusterNet,
 		KeepalivedConfig: controller.KeepalivedConfig{
-			Interface: keepalivedInterface,
 			IsPrimary: isPrimary,
 		},
 	}).SetupWithManager(mgr); err != nil {

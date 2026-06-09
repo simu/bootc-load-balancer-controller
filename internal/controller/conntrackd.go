@@ -11,14 +11,18 @@ import (
 func (r *LoadBalancerConfigReconciler) RenderConntrackdConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
 	l := logf.FromContext(ctx)
 
-	internalIPs, err := r.internalIPs(lbconfig)
+	internalIPs, err := r.internalIPs()
 	if err != nil {
 		return "", fmt.Errorf("failed to compute internal IPs: %w", err)
 	}
+	clusterInterface, err := r.ClusterNetworkInterface(ctx)
+	if err != nil {
+		return "", nil
+	}
 
-	l.Info("Rendering conntrackd config", "interface", r.KeepalivedConfig.Interface)
+	l.Info("Rendering conntrackd config", "interface", clusterInterface)
 	return renderTemplate(lbconfig.Spec.Distribution, "conntrackd.conf.tmpl", map[string]any{
-		"Interface": r.KeepalivedConfig.Interface,
+		"Interface": clusterInterface,
 		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
 		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary),
 	})
