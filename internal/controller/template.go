@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"path/filepath"
 	"text/template"
 )
 
@@ -11,7 +12,7 @@ import (
 var configTemplates embed.FS
 
 func renderTemplate(distribution, templateName string, templateData map[string]any) (string, error) {
-	tpath := fmt.Sprintf("config_templates/%s/%s", distribution, templateName)
+	tpath := filepath.Join("config_templates", distribution, templateName)
 
 	t, err := template.ParseFS(configTemplates, tpath)
 	if err != nil {
