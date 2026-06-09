@@ -98,8 +98,11 @@ func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) 
 	return data, multierr.Combine(errors...)
 }
 
-func privateVIPs(vips *lb.LoadBalancerConfigVIPs) ([]netip.Prefix, error) {
+func privateVIPs(vips *lb.LoadBalancerConfigVIPs, additionalVIPs ...netip.Prefix) ([]netip.Prefix, error) {
 	addrs := map[netip.Prefix]struct{}{}
+	for _, a := range additionalVIPs {
+		addrs[a] = struct{}{}
+	}
 	errors := []error{}
 
 	for _, address := range vips.API {
