@@ -98,7 +98,6 @@ func keepalivedVIPs(vips *lb.LoadBalancerConfigVIPs) ([]string, error) {
 		} else {
 			errors = append(errors, err)
 		}
-
 	}
 	for _, address := range vips.Ingress {
 		if address.Type != lb.AddressTypePrivate {
@@ -111,11 +110,10 @@ func keepalivedVIPs(vips *lb.LoadBalancerConfigVIPs) ([]string, error) {
 		}
 	}
 	if vips.NAT != nil && vips.NAT.Type == lb.AddressTypePrivate {
-		a, err := addrFromVIP(vips.NAT)
-		if err != nil {
-			errors = append(errors, err)
-		} else {
+		if a, err := addrFromVIP(vips.NAT); err == nil {
 			addrs = append(addrs, a)
+		} else {
+			errors = append(errors, err)
 		}
 	}
 
