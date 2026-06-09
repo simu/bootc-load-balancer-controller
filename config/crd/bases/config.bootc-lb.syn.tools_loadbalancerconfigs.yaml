@@ -40,10 +40,273 @@ spec:
           spec:
             description: spec defines the desired state of LoadBalancerConfig
             properties:
-              foo:
-                description: foo is an example field of LoadBalancerConfig. Edit loadbalancerconfig_types.go
-                  to remove/update
+              apiBackend:
+                description: Kubernetes API server backend config.
+                properties:
+                  nodeSelector:
+                    description: |-
+                      NodeSelector selects the cluster nodes which the LB HAProxy API
+                      backends should target.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                required:
+                - nodeSelector
+                type: object
+              cloud:
+                description: Cloud provider for which the loadbalancers should be
+                  configured.
+                enum:
+                - cloudscale
+                - Exoscale
                 type: string
+              cloudCredentials:
+                description: |-
+                  CloudCredentials references a secret which contains credentials for
+                  the cloud provider selected via field `cloud`.
+                properties:
+                  name:
+                    default: ""
+                    description: |-
+                      Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              clusterNetwork:
+                description: |-
+                  ClusterNetwork defines the CIDR of the private network in which the
+                  cluster nodes are running.
+
+                  The LBs will allocate IPs `.1`, `.2` and `.3` in this network.
+
+                  `.1` will be the default gateway IP.
+                  `.2` and `.3` will be additional IPs for the two LB instances.
+                type: string
+              distribution:
+                description: Distribution defines the set of HAProxy backends.
+                enum:
+                - openshift
+                type: string
+              firewallRules:
+                description: |-
+                  Custom Firewall rules.
+                  The controller configures a default set of firewall rules based on
+                  `VirtualAddresses`.
+                items:
+                  type: string
+                type: array
+              ingressBackend:
+                description: Kubernetes ingress controller backend config.
+                properties:
+                  nodeSelector:
+                    description: |-
+                      NodeSelector selects the cluster nodes which the LB HAProxy API
+                      backends should target.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                required:
+                - nodeSelector
+                type: object
+              virtualAddresses:
+                description: VirtualAddresses defines the IP addresses on which the
+                  LB operates.
+                properties:
+                  api:
+                    description: Virtual addresses for the Kubernetes API server
+                    items:
+                      properties:
+                        address:
+                          description: Address is the address in CIDR notation.
+                          type: string
+                        family:
+                          description: Family is the IP address family (IPv4 or IPv6).
+                          enum:
+                          - IPv4
+                          - IPv6'
+                          type: string
+                        type:
+                          description: |-
+                            Type indicates whether the address is a public or private VIP
+
+                            Public addresses are managed by Floaty, private addresses are
+                            managed by keepalived.
+                          enum:
+                          - public
+                          - private
+                          type: string
+                      required:
+                      - address
+                      - family
+                      - type
+                      type: object
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - address
+                    x-kubernetes-list-type: map
+                  ingress:
+                    description: |-
+                      Virtual addresses for the ingress controller
+
+                      If omitted, the HAproxy ingress section won't be configured.
+                    items:
+                      properties:
+                        address:
+                          description: Address is the address in CIDR notation.
+                          type: string
+                        family:
+                          description: Family is the IP address family (IPv4 or IPv6).
+                          enum:
+                          - IPv4
+                          - IPv6'
+                          type: string
+                        type:
+                          description: |-
+                            Type indicates whether the address is a public or private VIP
+
+                            Public addresses are managed by Floaty, private addresses are
+                            managed by keepalived.
+                          enum:
+                          - public
+                          - private
+                          type: string
+                      required:
+                      - address
+                      - family
+                      - type
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - address
+                    x-kubernetes-list-type: map
+                  nat:
+                    description: |-
+                      Virtual address for the default gateway SNAT source.
+
+                      If omitted, the LBs are configured without NAT gateway
+                      functionality.
+                    properties:
+                      address:
+                        description: Address is the address in CIDR notation.
+                        type: string
+                      family:
+                        description: Family is the IP address family (IPv4 or IPv6).
+                        enum:
+                        - IPv4
+                        - IPv6'
+                        type: string
+                      type:
+                        description: |-
+                          Type indicates whether the address is a public or private VIP
+
+                          Public addresses are managed by Floaty, private addresses are
+                          managed by keepalived.
+                        enum:
+                        - public
+                        - private
+                        type: string
+                    required:
+                    - address
+                    - family
+                    - type
+                    type: object
+                required:
+                - api
+                type: object
+            required:
+            - apiBackend
+            - cloud
+            - cloudCredentials
+            - clusterNetwork
+            - distribution
+            - virtualAddresses
             type: object
           status:
             description: status defines the observed state of LoadBalancerConfig
