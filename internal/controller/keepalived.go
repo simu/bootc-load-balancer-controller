@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net/netip"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -27,13 +28,17 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 		prio = 200
 	}
 
-	vips, err := privateVIPs(&lbconfig.Spec.VirtualAddresses, false)
+	vips, err := privateVIPs[netip.Prefix](&lbconfig.Spec.VirtualAddresses, false)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare Keepalived VIPs: %w", err)
 	}
 
 	if lbconfig.Spec.VirtualAddresses.NAT != nil {
-		vips = append(vips, internalIPs.DefaultGateway.String())
+		if gw, err := internalIPs.DefaultGateway.Prefix(32); err == nil {
+			vips = append(vips, gw)
+		} else {
+			return "", fmt.Errorf("failed to prepare default gateway VIP")
+		}
 	}
 
 	l.Info("Rendering keepalived config", "interface", r.KeepalivedConfig.Interface, "priority", prio)

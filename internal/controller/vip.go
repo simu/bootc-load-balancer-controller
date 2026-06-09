@@ -19,9 +19,9 @@ type Backend struct {
 }
 
 type FrontendData struct {
-	API      []string
-	Ignition []string
-	Ingress  []string
+	API      []netip.Addr
+	Ignition []netip.Addr
+	Ingress  []netip.Addr
 }
 
 type InternalIPs struct {
@@ -65,7 +65,7 @@ func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) 
 	var errors []error
 
 	for _, address := range vips.API {
-		if addr, err := addrFromVIP[string](&address); err == nil {
+		if addr, err := parseVIPAddr(&address); err == nil {
 			data.API = append(data.API, addr)
 			if address.Type == lb.AddressTypePrivate {
 				data.Ignition = append(data.Ignition, addr)
@@ -76,7 +76,7 @@ func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) 
 	}
 
 	for _, address := range vips.Ingress {
-		if addr, err := addrFromVIP[string](&address); err == nil {
+		if addr, err := parseVIPAddr(&address); err == nil {
 			data.Ingress = append(data.Ingress, addr)
 		} else {
 			errors = append(errors, err)
@@ -86,15 +86,15 @@ func getHAProxyFrontends(vips *lb.LoadBalancerConfigVIPs) (FrontendData, error) 
 	return data, multierr.Combine(errors...)
 }
 
-func privateVIPs(vips *lb.LoadBalancerConfigVIPs, cidr bool) ([]string, error) {
-	addrs := []string{}
+func privateVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, cidr bool) ([]T, error) {
+	addrs := []T{}
 	errors := []error{}
 
 	for _, address := range vips.API {
 		if address.Type != lb.AddressTypePrivate {
 			continue
 		}
-		if a, err := addrFromVIP[string](&address); err == nil {
+		if a, err := parseVIP[T](&address); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
@@ -104,14 +104,14 @@ func privateVIPs(vips *lb.LoadBalancerConfigVIPs, cidr bool) ([]string, error) {
 		if address.Type != lb.AddressTypePrivate {
 			continue
 		}
-		if a, err := addrFromVIP[string](&address); err == nil {
+		if a, err := parseVIP[T](&address); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
 		}
 	}
 	if vips.NAT != nil && vips.NAT.Type == lb.AddressTypePrivate {
-		if a, err := addrFromVIP[string](vips.NAT); err == nil {
+		if a, err := parseVIP[T](vips.NAT); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
@@ -129,7 +129,7 @@ func publicVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, ci
 		if address.Type != lb.AddressTypePublic {
 			continue
 		}
-		if a, err := addrFromVIP[T](&address); err == nil {
+		if a, err := parseVIP[T](&address); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
@@ -139,14 +139,14 @@ func publicVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, ci
 		if address.Type != lb.AddressTypePublic {
 			continue
 		}
-		if a, err := addrFromVIP[T](&address); err == nil {
+		if a, err := parseVIP[T](&address); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
 		}
 	}
 	if vips.NAT != nil && vips.NAT.Type == lb.AddressTypePublic {
-		if a, err := addrFromVIP[T](vips.NAT); err == nil {
+		if a, err := parseVIP[T](vips.NAT); err == nil {
 			addrs = append(addrs, a)
 		} else {
 			errors = append(errors, err)
@@ -156,14 +156,12 @@ func publicVIPs[T netip.Addr | netip.Prefix](vips *lb.LoadBalancerConfigVIPs, ci
 	return addrs, multierr.Combine(errors...)
 }
 
-type AddrOutput interface {
-	netip.Addr | netip.Prefix | string
-}
+var (
+	parseVIPAddr   = parseVIP[netip.Addr]
+	parseVIPPrefix = parseVIP[netip.Prefix]
+)
 
-// TODO(sg): Refactor the whole netip handling. I don't think you're supposed
-// to do this in Go ^^. Also, we don't need to preconvert to strings, that's
-// done automatically by `text/template`.
-func addrFromVIP[T AddrOutput](addr *lb.VirtualAddress) (res T, err error) {
+func parseVIP[T netip.Addr | netip.Prefix](addr *lb.VirtualAddress) (res T, err error) {
 	a, e := netip.ParsePrefix(addr.Address)
 	if e != nil {
 		err = fmt.Errorf("failed to parse VIP: %w", e)
@@ -178,12 +176,11 @@ func addrFromVIP[T AddrOutput](addr *lb.VirtualAddress) (res T, err error) {
 		return r, nil
 	} else if r, ok := any(a.Addr()).(T); ok {
 		return r, nil
-	} else if r, ok := any(a.Addr().String()).(T); ok {
-		return r, nil
 	} else {
 		err = fmt.Errorf("unable to generate requested return type: %v", reflect.TypeOf(res).String())
 		return
 	}
+
 }
 
 func (r *LoadBalancerConfigReconciler) internalIPs(lbconfig *lb.LoadBalancerConfig) (*InternalIPs, error) {
