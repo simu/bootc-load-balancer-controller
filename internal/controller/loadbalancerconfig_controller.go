@@ -2,11 +2,14 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"net/netip"
 	"time"
 
 	"go.uber.org/multierr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +34,11 @@ type LoadBalancerConfigReconciler struct {
 	KeepalivedConfig KeepalivedConfig
 }
 
+type LocalBackendConfiguration struct {
+	API     []Backend
+	Ingress []Backend
+}
+
 // +kubebuilder:rbac:groups=config.bootc-lb.syn.tools,resources=loadbalancerconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=config.bootc-lb.syn.tools,resources=loadbalancerconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.bootc-lb.syn.tools,resources=loadbalancerconfigs/finalizers,verbs=update
@@ -42,18 +50,30 @@ type LoadBalancerConfigReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.3/pkg/reconcile
 func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := logf.FromContext(ctx)
-
 	var lbconfig lb.LoadBalancerConfig
 	if err := r.Get(ctx, req.NamespacedName, &lbconfig); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	var credentialSecret corev1.Secret
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: lbconfig.Namespace,
+		Name:      lbconfig.Spec.CloudCredentials.Name,
+	}, &credentialSecret); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to read cloud provider credentials: %w", err)
+	}
+
+	return r.ReconcileLBConfig(ctx, &lbconfig, &credentialSecret, nil)
+}
+
+func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig, credentialSecret *corev1.Secret, localBackends *LocalBackendConfiguration) (ctrl.Result, error) {
+	l := logf.FromContext(ctx)
+
 	l.Info("Reconciling LB config", "cloud", lbconfig.Spec.Cloud, "distribution", lbconfig.Spec.Distribution)
 
 	errors := []error{}
 
-	if haproxyApi, err := r.RenderHAProxyAPIConfig(ctx, &lbconfig); err == nil {
+	if haproxyApi, err := r.RenderHAProxyAPIConfig(ctx, lbconfig, localBackends); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, HAProxyAPIConfigFile, haproxyApi); err != nil {
 			errors = append(errors, err)
 		}
@@ -61,7 +81,7 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		errors = append(errors, err)
 	}
 
-	if haproxyIngress, err := r.RenderHAProxyIngressConfig(ctx, &lbconfig); err == nil {
+	if haproxyIngress, err := r.RenderHAProxyIngressConfig(ctx, lbconfig, localBackends); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, HAProxyIngressConfigFile, haproxyIngress); err != nil {
 			errors = append(errors, err)
 		}
@@ -69,7 +89,7 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		errors = append(errors, err)
 	}
 
-	if keepalived, err := r.RenderKeepalivedConfig(ctx, &lbconfig); err == nil {
+	if keepalived, err := r.RenderKeepalivedConfig(ctx, lbconfig); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedConfigFile, keepalived); err != nil {
 			errors = append(errors, err)
 		}
@@ -77,7 +97,7 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		errors = append(errors, err)
 	}
 
-	if floaty, err := r.RenderFloatyConfig(ctx, &lbconfig); err == nil {
+	if floaty, err := r.RenderFloatyConfig(ctx, lbconfig, credentialSecret); err == nil {
 		l.Info("Floaty config", "config", floaty, "error", err)
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, FloatyConfigFile, floaty); err != nil {
 			errors = append(errors, err)
@@ -86,7 +106,7 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		errors = append(errors, err)
 	}
 
-	if conntrackd, err := r.RenderConntrackdConfig(ctx, &lbconfig); err == nil {
+	if conntrackd, err := r.RenderConntrackdConfig(ctx, lbconfig); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ConntrackdConfigFile, conntrackd); err != nil {
 			errors = append(errors, err)
 		}
@@ -96,7 +116,7 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	//TODO(sg): firewall rules
 
-	if publicNMConn, err := r.RenderPublicNMConnection(ctx, &lbconfig); err == nil {
+	if publicNMConn, err := r.RenderPublicNMConnection(ctx, lbconfig); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, PublicNMConnectionFile, publicNMConn); err != nil {
 			errors = append(errors, err)
 		}
@@ -112,7 +132,7 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		errors = append(errors, err)
 	}
 
-	if keepalivedNMConn, err := r.RenderKeepalivedDummyNMConnection(ctx, &lbconfig); err == nil {
+	if keepalivedNMConn, err := r.RenderKeepalivedDummyNMConnection(ctx, lbconfig); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedDummyNMConnectionFile, keepalivedNMConn); err != nil {
 			errors = append(errors, err)
 		}

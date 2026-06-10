@@ -15,7 +15,7 @@ const (
 	FloatyConfigFile         = "/etc/floaty/global.yaml"
 	HAProxyAPIConfigFile     = "/etc/haproxy/conf.d/api.cfg"
 	HAProxyIngressConfigFile = "/etc/haproxy/conf.d/ingress.cfg"
-	KeepalivedConfigFile     = "/etc/keepalived/keepalived.conf"
+	KeepalivedConfigFile     = "/etc/keepalived/conf.d/lb.conf"
 
 	PublicNMConnectionFile          = "/etc/NetworkManager/system-connections/public.nmconnection"
 	ClusterNetworkNMConnectionFile  = "/etc/NetworkManager/system-connections/cluster-net.nmconnection"

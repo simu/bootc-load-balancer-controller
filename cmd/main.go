@@ -25,6 +25,7 @@ import (
 
 	configv1alpha1 "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 	"github.com/projectsyn/bootc-load-balancer-controller/internal/controller"
+	"github.com/projectsyn/bootc-load-balancer-controller/internal/render"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -53,6 +54,7 @@ func main() {
 	var publicInterface string
 	var clusterNetwork string
 	var configRoot string
+	var renderFromFile, apiBackends, ingressBackends string
 
 	detectedPublicInterface, err := netmon.DefaultRouteInterface()
 	if err != nil {
@@ -86,6 +88,12 @@ func main() {
 		"Configure the LB's cluster network CIDR. This network must allow VRRP traffic.")
 	flag.StringVar(&configRoot, "config-root", "/",
 		"Base directory for config files. Defaults to the LB's root directory")
+	flag.StringVar(&renderFromFile, "render-from-file", "",
+		"Just render configs based on the custom resource in the provided YAML file and exit. Intended to be used to bootstrap new LBs")
+	flag.StringVar(&apiBackends, "api-backends", "",
+		"Comma-separated list API backend IPs to use when rendering config from a custom resource provided in a YAML file.")
+	flag.StringVar(&ingressBackends, "ingress-backends", "",
+		"Comma-separated list ingress backend IPs to use when rendering config from a custom resource provided in a YAML file.")
 
 	opts := zap.Options{
 		Development: true,
@@ -197,7 +205,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.LoadBalancerConfigReconciler{
+	r := controller.LoadBalancerConfigReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 
@@ -207,7 +215,18 @@ func main() {
 		KeepalivedConfig: controller.KeepalivedConfig{
 			IsPrimary: isPrimary,
 		},
-	}).SetupWithManager(mgr); err != nil {
+	}
+
+	if renderFromFile != "" {
+		err := render.RenderFile(&r, renderFromFile, apiBackends, ingressBackends)
+		if err != nil {
+			setupLog.Error(err, "")
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	if err := (&r).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "loadbalancerconfig")
 		os.Exit(1)
 	}

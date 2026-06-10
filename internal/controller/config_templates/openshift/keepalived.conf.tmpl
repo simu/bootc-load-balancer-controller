@@ -1,9 +1,3 @@
-global_defs {
-  snmp_socket unix:/var/agentx/master
-  vrrp_notify_fifo /var/run/keepalived.floaty.fifo
-  vrrp_notify_fifo_script /usr/sbin/floaty-global.wrapper.sh
-}
-
 vrrp_instance lb {
   interface                 {{ .Interface }}
   state                     BACKUP

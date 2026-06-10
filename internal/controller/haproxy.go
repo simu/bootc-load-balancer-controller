@@ -4,15 +4,23 @@ import (
 	"context"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
 )
 
-func (r *LoadBalancerConfigReconciler) RenderHAProxyAPIConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
+type BackendList (*[]Backend)
+
+func (r *LoadBalancerConfigReconciler) RenderHAProxyAPIConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig, localBackends *LocalBackendConfiguration) (string, error) {
 	l := logf.FromContext(ctx)
 
-	templateData, err := r.haproxyTemplateData(ctx, lbconfig)
+	localAPIBackends := BackendList(nil)
+	if localBackends != nil {
+		localAPIBackends = &localBackends.API
+	}
+
+	templateData, err := r.haproxyTemplateData(ctx, lbconfig, &lbconfig.Spec.APIBackend.NodeSelector, localAPIBackends)
 	if err != nil {
 		return "", err
 	}
@@ -21,10 +29,14 @@ func (r *LoadBalancerConfigReconciler) RenderHAProxyAPIConfig(ctx context.Contex
 	return renderTemplate(lbconfig.Spec.Distribution, "haproxy.api.cfg.tmpl", templateData)
 }
 
-func (r *LoadBalancerConfigReconciler) RenderHAProxyIngressConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
+func (r *LoadBalancerConfigReconciler) RenderHAProxyIngressConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig, localBackends *LocalBackendConfiguration) (string, error) {
 	l := logf.FromContext(ctx)
+	localIngressBackends := BackendList(nil)
+	if localBackends != nil {
+		localIngressBackends = &localBackends.Ingress
+	}
 
-	templateData, err := r.haproxyTemplateData(ctx, lbconfig)
+	templateData, err := r.haproxyTemplateData(ctx, lbconfig, &lbconfig.Spec.IngressBackend.NodeSelector, localIngressBackends)
 	if err != nil {
 		return "", err
 	}
@@ -33,15 +45,18 @@ func (r *LoadBalancerConfigReconciler) RenderHAProxyIngressConfig(ctx context.Co
 	return renderTemplate(lbconfig.Spec.Distribution, "haproxy.ingress.cfg.tmpl", templateData)
 }
 
-func (r *LoadBalancerConfigReconciler) haproxyTemplateData(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (map[string]any, error) {
+func (r *LoadBalancerConfigReconciler) haproxyTemplateData(ctx context.Context, lbconfig *lb.LoadBalancerConfig, ls *metav1.LabelSelector, localBackends *[]Backend) (map[string]any, error) {
 	frontends, err := getHAProxyFrontends(&lbconfig.Spec.VirtualAddresses)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare ingress HAProxy frontends: %w", err)
 	}
 
-	backends, err := r.getHAProxyBackends(ctx, &lbconfig.Spec.APIBackend.NodeSelector)
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare ingress HAProxy backends: %w", err)
+	backends := *localBackends
+	if localBackends == nil {
+		backends, err = r.getHAProxyBackends(ctx, ls)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare ingress HAProxy backends: %w", err)
+		}
 	}
 	return map[string]any{
 		"Frontends": frontends,

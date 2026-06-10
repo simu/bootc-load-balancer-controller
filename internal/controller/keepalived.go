@@ -6,7 +6,6 @@ import (
 	"net/netip"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
@@ -57,16 +56,8 @@ func (r *LoadBalancerConfigReconciler) RenderKeepalivedConfig(ctx context.Contex
 	})
 }
 
-func (r *LoadBalancerConfigReconciler) RenderFloatyConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
+func (r *LoadBalancerConfigReconciler) RenderFloatyConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig, credentialSecret *corev1.Secret) (string, error) {
 	l := logf.FromContext(ctx)
-
-	var credentialSecret corev1.Secret
-	if err := r.Get(ctx, types.NamespacedName{
-		Namespace: lbconfig.Namespace,
-		Name:      lbconfig.Spec.CloudCredentials.Name,
-	}, &credentialSecret); err != nil {
-		return "", fmt.Errorf("failed to read cloud provider credentials: %w", err)
-	}
 
 	vips, err := publicVIPs(&lbconfig.Spec.VirtualAddresses)
 	if err != nil {
