@@ -18,7 +18,7 @@ func (r *LoadBalancerConfigReconciler) RenderHAProxyAPIConfig(ctx context.Contex
 	}
 
 	l.Info("Rendering API server HAProxy config", "lbconfig", lbconfig.Name)
-	return renderTemplate(lbconfig.Spec.Distribution, "haproxy.ingress.cfg.tmpl", templateData)
+	return renderTemplate(lbconfig.Spec.Distribution, "haproxy.api.cfg.tmpl", templateData)
 }
 
 func (r *LoadBalancerConfigReconciler) RenderHAProxyIngressConfig(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
