@@ -1,0 +1,12 @@
+frontend fe-api
+  mode tcp
+  default_backend be-api
+{{- range .Frontends.API }}
+  bind {{ . }}:6443
+{{- end }}
+
+backend be-api
+  option tcp-check
+{{- range $index, $backend := .Backends }}
+  server server_{{ $index }} {{ $backend.Address }}:6443 check fall 3 rise 2 inter 10s
+{{- end }}

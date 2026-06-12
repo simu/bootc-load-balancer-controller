@@ -21,7 +21,7 @@ func (r *LoadBalancerConfigReconciler) RenderConntrackdConfig(ctx context.Contex
 	}
 
 	l.Info("Rendering conntrackd config", "interface", clusterInterface)
-	return renderTemplate(lbconfig.Spec.Distribution, "conntrackd.conf.tmpl", map[string]any{
+	return renderTemplate("", "conntrackd.conf.tmpl", map[string]any{
 		"Interface": clusterInterface,
 		"SrcIP":     internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
 		"DstIP":     internalIPs.peerInternalIP(r.KeepalivedConfig.IsPrimary),

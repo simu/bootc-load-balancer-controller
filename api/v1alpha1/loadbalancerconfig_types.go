@@ -38,7 +38,7 @@ type LoadBalancerConfigSpec struct {
 	// Distribution defines the set of HAProxy backends.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=openshift
+	// +kubebuilder:validation:Enum=openshift;talos
 	Distribution string `json:"distribution"`
 
 	// VirtualAddresses defines the IP addresses on which the LB operates.

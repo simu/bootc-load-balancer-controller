@@ -121,6 +121,7 @@ spec:
                 description: Distribution defines the set of HAProxy backends.
                 enum:
                 - openshift
+                - talos
                 type: string
               firewallRules:
                 description: |-
