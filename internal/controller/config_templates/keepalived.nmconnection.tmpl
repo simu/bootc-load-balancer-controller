@@ -14,8 +14,10 @@ method=manual
 address{{ idx1 $index }}={{ $vip }}
 {{- end }}
 
+{{- if gt (.VIPs6 | len) 0 }}
 [ipv6]
 method=manual
 {{- range $index, $vip := .VIPs6 }}
 address{{ idx1 $index }}={{ $vip }}
+{{- end }}
 {{- end }}
