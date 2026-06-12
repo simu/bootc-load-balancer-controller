@@ -114,8 +114,6 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 		errors = append(errors, err)
 	}
 
-	//TODO(sg): firewall rules
-
 	if publicNMConn, err := r.RenderPublicNMConnection(ctx, lbconfig); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, PublicNMConnectionFile, publicNMConn, 0600); err != nil {
 			errors = append(errors, err)
@@ -142,6 +140,21 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 
 	if sysctl, err := r.RenderSysctlConf(ctx); err == nil {
 		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, SysctlConfFile, sysctl, 0644); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
+
+	if zoneext, err := r.RenderFirewallExternalZone(ctx, lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, FirewalldExternalZone, zoneext, 0644); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
+	if fwdirect, err := r.RenderFirewallDirectRules(ctx, lbconfig); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, FirewalldDirectFile, fwdirect, 0644); err != nil {
 			errors = append(errors, err)
 		}
 	} else {

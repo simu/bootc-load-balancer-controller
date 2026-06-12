@@ -1,0 +1,3 @@
+<direct>
+  <rule ipv="ipv4" table="nat" chain="POSTROUTING" priority="0">-o {{ .PublicInterface }} -s {{ .ClusterNetwork }} -p tcp -j SNAT --to-source {{ .NATAddress }}</rule>
+</direct>

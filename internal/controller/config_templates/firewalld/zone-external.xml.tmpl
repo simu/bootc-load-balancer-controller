@@ -1,0 +1,24 @@
+<zone>
+  <short>External</short>
+  <description>For use on external networks. You do not trust the other computers on networks to not harm your computer. Only selected incoming connections are accepted.</description>
+  <masquerade/>
+  <forward/>
+  <service name="ssh"/>
+  <service name="http"/>
+  <service name="https"/>
+  <service name="kube-apiserver"/>
+{{- range $ip := .IPv4 }}
+  <rule family="ipv4">
+    <destination address="{{ $ip }}"/>
+    <service name="ssh"/>
+    <reject/>
+  </rule>
+{{- end }}
+{{- range $ip := .IPv6 }}
+  <rule family="ipv6">
+    <destination address="{{ $ip }}"/>
+    <service name="ssh"/>
+    <reject/>
+  </rule>
+{{- end }}
+</zone>
