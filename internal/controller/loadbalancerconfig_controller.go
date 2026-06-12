@@ -74,7 +74,7 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	errors := []error{}
 
 	if haproxyApi, err := r.RenderHAProxyAPIConfig(ctx, lbconfig, localBackends); err == nil {
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, HAProxyAPIConfigFile, haproxyApi); err != nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, HAProxyAPIConfigFile, haproxyApi, 0644); err != nil {
 			errors = append(errors, err)
 		}
 	} else {
@@ -82,7 +82,7 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	}
 
 	if haproxyIngress, err := r.RenderHAProxyIngressConfig(ctx, lbconfig, localBackends); err == nil {
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, HAProxyIngressConfigFile, haproxyIngress); err != nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, HAProxyIngressConfigFile, haproxyIngress, 0644); err != nil {
 			errors = append(errors, err)
 		}
 	} else {
@@ -90,7 +90,7 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	}
 
 	if keepalived, err := r.RenderKeepalivedConfig(ctx, lbconfig); err == nil {
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedConfigFile, keepalived); err != nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedConfigFile, keepalived, 0644); err != nil {
 			errors = append(errors, err)
 		}
 	} else {
@@ -99,7 +99,7 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 
 	if floaty, err := r.RenderFloatyConfig(ctx, lbconfig, credentialSecret); err == nil {
 		l.Info("Floaty config", "config", floaty, "error", err)
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, FloatyConfigFile, floaty); err != nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, FloatyConfigFile, floaty, 0644); err != nil {
 			errors = append(errors, err)
 		}
 	} else {
@@ -107,7 +107,7 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	}
 
 	if conntrackd, err := r.RenderConntrackdConfig(ctx, lbconfig); err == nil {
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ConntrackdConfigFile, conntrackd); err != nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ConntrackdConfigFile, conntrackd, 0644); err != nil {
 			errors = append(errors, err)
 		}
 	} else {
@@ -117,7 +117,7 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	//TODO(sg): firewall rules
 
 	if publicNMConn, err := r.RenderPublicNMConnection(ctx, lbconfig); err == nil {
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, PublicNMConnectionFile, publicNMConn); err != nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, PublicNMConnectionFile, publicNMConn, 0600); err != nil {
 			errors = append(errors, err)
 		}
 	} else {
@@ -125,7 +125,7 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	}
 
 	if clusterNetNMConn, err := r.RenderClusterNetNMConnection(ctx); err == nil {
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ClusterNetworkNMConnectionFile, clusterNetNMConn); err != nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, ClusterNetworkNMConnectionFile, clusterNetNMConn, 0600); err != nil {
 			errors = append(errors, err)
 		}
 	} else {
@@ -133,7 +133,7 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	}
 
 	if keepalivedNMConn, err := r.RenderKeepalivedDummyNMConnection(ctx, lbconfig); err == nil {
-		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedDummyNMConnectionFile, keepalivedNMConn); err != nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, KeepalivedDummyNMConnectionFile, keepalivedNMConn, 0600); err != nil {
 			errors = append(errors, err)
 		}
 	} else {

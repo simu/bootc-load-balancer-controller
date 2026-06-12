@@ -24,17 +24,20 @@ const (
 	fileHeader = "# Managed by bootc-loadbalancer-controller\n"
 )
 
-func (r *LoadBalancerConfigReconciler) WriteConfig(ctx context.Context, lbconfigMeta *metav1.ObjectMeta, configfile, configdata string) error {
+func (r *LoadBalancerConfigReconciler) WriteConfig(ctx context.Context, lbconfigMeta *metav1.ObjectMeta, configfile, configdata string, mode os.FileMode) error {
 	l := logf.FromContext(ctx)
 
+	if mode == 0 {
+		mode = 0644
+	}
 	cfgfilepath := filepath.Join(r.ConfigRoot, configfile)
-	l.Info("Writing config file", "file", configfile, "path", cfgfilepath)
+
+	l.Info("Writing config file", "file", configfile, "path", cfgfilepath, "mode", mode)
 
 	if err := os.MkdirAll(filepath.Dir(cfgfilepath), 0755); err != nil {
 		return fmt.Errorf("failed to create director for config file: %w", err)
 	}
-
-	cfgfile, err := os.OpenFile(cfgfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	cfgfile, err := os.OpenFile(cfgfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
 		return fmt.Errorf("failed to create or open config file: %w", err)
 	}
