@@ -77,7 +77,15 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	for component := range maps.Keys(updated) {
 		l.Info("reloading/restarting component", "component", component)
-		component.Reload(ctx)
+		if r.ConfigRoot != "/" {
+			cmd, err := component.ReloadCommand()
+			if err != nil {
+				cmd = fmt.Sprintf("failed to render reload command: %s", err)
+			}
+			l.Info("not trying to restart service because config-root != /", "config-root", r.ConfigRoot, "command", cmd)
+		} else {
+			component.Reload(ctx)
+		}
 	}
 
 	return ctrl.Result{}, multierr.Combine(err, statuserr)
@@ -266,14 +274,16 @@ func (r *LoadBalancerConfigReconciler) CompareAndWrite(ctx context.Context, lbco
 
 	dataDigest := fmt.Sprintf("%x", sha256.Sum256([]byte(configdata)))
 
-	l.Info("live vs new sha256 digest", "configfile", configfile, "live sha256", nodeStatus.ConfigHashes[configfile], "new sha256", dataDigest)
-	if nodeStatus.ConfigHashes[configfile] == dataDigest {
+	isDiskModified := r.IsFileModified(ctx, configfile)
+
+	l.Info("file modification comparison inputs", "configfile", configfile, "cr status sha256", nodeStatus.ConfigHashes[configfile], "data sha256", dataDigest, "on-disk modified", isDiskModified)
+	if !isDiskModified && nodeStatus.ConfigHashes[configfile] == dataDigest {
 		return false, nil
 	}
 	nodeStatus.ConfigHashes[configfile] = dataDigest
 	lbconfig.Status.Nodes[r.Hostname] = nodeStatus
 
-	return true, r.WriteConfig(ctx, &lbconfig.ObjectMeta, configfile, configdata, mode)
+	return true, r.WriteConfig(ctx, &lbconfig.ObjectMeta, configfile, configdata, dataDigest, mode)
 }
 
 func (r *LoadBalancerConfigReconciler) Filter(obj client.Object) bool {
