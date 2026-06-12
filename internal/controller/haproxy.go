@@ -51,9 +51,10 @@ func (r *LoadBalancerConfigReconciler) haproxyTemplateData(ctx context.Context, 
 		return nil, fmt.Errorf("failed to prepare ingress HAProxy frontends: %w", err)
 	}
 
-	backends := *localBackends
-	if localBackends == nil {
-		backends, err = r.getHAProxyBackends(ctx, ls)
+	backends := localBackends
+	if backends == nil {
+		realbackends, err := r.getHAProxyBackends(ctx, ls)
+		backends = &realbackends
 		if err != nil {
 			return nil, fmt.Errorf("failed to prepare ingress HAProxy backends: %w", err)
 		}
