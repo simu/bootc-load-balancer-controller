@@ -117,9 +117,9 @@ type LoadBalancerConfigBackend struct {
 
 // LoadBalancerConfigStatus defines the observed state of LoadBalancerConfig.
 type LoadBalancerConfigStatus struct {
-	// TODO(sg): figure out if we can have multiple controllers update
-	// status? Maybe have a map field where each controller gets to own
-	// its hostname as key?
+	// nodes tracks the status of each LB node that's configured through
+	// this LoadBalancerConfig resource.
+	Nodes map[string]*LoadBalancerNodeStatus `json:"nodes,omitempty"`
 
 	// conditions represent the current state of the LoadBalancerConfig resource.
 	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
@@ -135,6 +135,36 @@ type LoadBalancerConfigStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
+
+type LoadBalancerNodeStatus struct {
+	// The node's public IP
+	// +required
+	PublicIP string `json:"publicIP"`
+
+	// The node's private IP
+	// +required
+	PrivateIP string `json:"privateIP"`
+
+	// The node's VRRP peer IP
+	// +required
+	VrrpIP string `json:"vrrpIP"`
+
+	// A map of config file names to sha256 hashes of the last rendered config.
+	//
+	// The contents of this map are used by the controller to decide
+	// whether to write new versions of each config file and whether the
+	// configured service should be restarted/reloaded.
+	ConfigHashes map[string]string `json:"configHashes,omitempty"`
+
+	// The LB node's status.
+	// +kubebuilder:validation:Enum=Ready;NotReady
+	Status string `json:"status"`
+}
+
+const (
+	NodeStatusNotReady = "NotReady"
+	NodeStatusReady    = "Ready"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status

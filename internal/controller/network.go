@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -40,18 +41,46 @@ func (r *LoadBalancerConfigReconciler) RenderSysctlConf(ctx context.Context) (st
 }
 
 func macAddressForInterface(interfaceName string) (string, error) {
-	macAddress := ""
-	ifList, err := net.Interfaces()
+	iface, err := net.InterfaceByName(interfaceName)
 	if err != nil {
-		return "", fmt.Errorf("fetching interfaces: %w", err)
+		return "", fmt.Errorf("Unable to find interface: %w", err)
 	}
-	for _, iface := range ifList {
-		if iface.Name == interfaceName {
-			macAddress = iface.HardwareAddr.String()
+	return iface.HardwareAddr.String(), nil
+}
+
+func primaryIPAddressForInterface(interfaceName string, ifaceNet *netip.Prefix) (string, error) {
+	iface, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return "", fmt.Errorf("Unable to find interface: %w", err)
+	}
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return "", fmt.Errorf("Failed to get addresses for interface: %w", err)
+	}
+	if len(addrs) == 0 {
+		return "", fmt.Errorf("Interface has no addresses")
+	}
+
+	primaryIP := ""
+	for _, addr := range addrs {
+		ip, err := netip.ParsePrefix(addr.String())
+		if ip.Addr().Is6() {
+			continue
+		}
+		if err != nil {
+			return "", fmt.Errorf("Failed to parse IP: %w", err)
+		}
+		if ifaceNet != nil && ip.Bits() == ifaceNet.Bits() {
+			primaryIP = ip.String()
+			break
+		} else if ifaceNet == nil {
+			primaryIP = ip.String()
+			break
 		}
 	}
-	if macAddress == "" {
-		return "", fmt.Errorf("failed to find MAC address for interface '%s'", interfaceName)
+	if primaryIP == "" {
+		return "", fmt.Errorf("Didn't find an IP which matches interface network prefix length")
 	}
-	return macAddress, nil
+
+	return primaryIP, nil
 }

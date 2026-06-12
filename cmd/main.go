@@ -208,6 +208,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		setupLog.Error(err, "Failed to determine LB hostname")
+	}
+
 	r := controller.LoadBalancerConfigReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -216,6 +221,7 @@ func main() {
 		PublicInterface: publicInterface,
 		ClusterNetwork:  clusterNet,
 		WatchNamespace:  watchNamespace,
+		Hostname:        hostname,
 		KeepalivedConfig: controller.KeepalivedConfig{
 			IsPrimary: isPrimary,
 		},

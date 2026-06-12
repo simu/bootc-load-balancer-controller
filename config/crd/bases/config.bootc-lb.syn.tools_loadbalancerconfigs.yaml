@@ -348,6 +348,44 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              nodes:
+                additionalProperties:
+                  properties:
+                    configHashes:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        A map of config file names to sha256 hashes of the last rendered config.
+
+                        The contents of this map are used by the controller to decide
+                        whether to write new versions of each config file and whether the
+                        configured service should be restarted/reloaded.
+                      type: object
+                    privateIP:
+                      description: The node's private IP
+                      type: string
+                    publicIP:
+                      description: The node's public IP
+                      type: string
+                    status:
+                      description: The LB node's status.
+                      enum:
+                      - Ready
+                      - NotReady
+                      type: string
+                    vrrpIP:
+                      description: The node's VRRP peer IP
+                      type: string
+                  required:
+                  - privateIP
+                  - publicIP
+                  - status
+                  - vrrpIP
+                  type: object
+                description: |-
+                  nodes tracks the status of each LB node that's configured through
+                  this LoadBalancerConfig resource.
+                type: object
             type: object
         required:
         - spec

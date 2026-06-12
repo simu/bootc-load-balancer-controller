@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/netip"
 	"os"
 	"strings"
@@ -78,12 +79,21 @@ func RenderFile(r *controller.LoadBalancerConfigReconciler, file, apiBackends, i
 
 	fmt.Printf("%v\n", creds.Data)
 
-	_, err = r.ReconcileLBConfig(context.Background(), &lbconfig, &creds, &controller.LocalBackendConfiguration{
+	updated, err := r.ReconcileLBConfig(context.Background(), &lbconfig, &creds, &controller.LocalBackendConfiguration{
 		API:     api,
 		Ingress: ingress,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to render loadbalancerconfig file: %w", err)
+	}
+
+	for component := range maps.Keys(updated) {
+		fmt.Printf("Would reload/restart %s\n", component)
+		if cmd, err := component.ReloadCommand(); err != nil {
+			fmt.Printf("Error rendering reload command for %s: %s", component, err)
+		} else {
+			fmt.Printf("\treload/restart command for %s: %s\n", component, cmd)
+		}
 	}
 
 	return nil
