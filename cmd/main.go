@@ -55,6 +55,7 @@ func main() {
 	var clusterNetwork string
 	var configRoot string
 	var renderFromFile, apiBackends, ingressBackends string
+	var watchNamespace string
 
 	detectedPublicInterface, err := netmon.DefaultRouteInterface()
 	if err != nil {
@@ -94,6 +95,8 @@ func main() {
 		"Comma-separated list API backend IPs to use when rendering config from a custom resource provided in a YAML file.")
 	flag.StringVar(&ingressBackends, "ingress-backends", "",
 		"Comma-separated list ingress backend IPs to use when rendering config from a custom resource provided in a YAML file.")
+	flag.StringVar(&watchNamespace, "watch-namespace", "default",
+		"The namespace in which to reconcile LoadBalancerConfig resources. Can be set to the empty string to reconcile resources in all namespaces")
 
 	opts := zap.Options{
 		Development: true,
@@ -212,6 +215,7 @@ func main() {
 		ConfigRoot:      configRoot,
 		PublicInterface: publicInterface,
 		ClusterNetwork:  clusterNet,
+		WatchNamespace:  watchNamespace,
 		KeepalivedConfig: controller.KeepalivedConfig{
 			IsPrimary: isPrimary,
 		},

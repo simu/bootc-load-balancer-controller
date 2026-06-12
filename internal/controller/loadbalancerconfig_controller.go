@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
@@ -29,6 +30,7 @@ type LoadBalancerConfigReconciler struct {
 	ConfigRoot      string
 	PublicInterface string
 	ClusterNetwork  netip.Prefix
+	WatchNamespace  string
 
 	// Keepalived
 	KeepalivedConfig KeepalivedConfig
@@ -165,6 +167,18 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	return ctrl.Result{}, multierr.Combine(errors...)
 }
 
+func (r *LoadBalancerConfigReconciler) Filter(obj client.Object) bool {
+	switch obj.(type) {
+	case *lb.LoadBalancerConfig:
+		return r.WatchNamespace != "" && r.WatchNamespace == obj.GetNamespace()
+	case *corev1.Node:
+		return true
+	case *corev1.Secret:
+		return r.WatchNamespace != "" && r.WatchNamespace == obj.GetNamespace()
+	}
+	return false
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *LoadBalancerConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -176,6 +190,7 @@ func (r *LoadBalancerConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Watches(&corev1.Secret{}, credentialsUpdateHandler{
 			client: mgr.GetClient(),
 		}).
+		WithEventFilter(predicate.NewPredicateFuncs(r.Filter)).
 		WithOptions(controller.Options{
 			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](
 				10*time.Second, 5*time.Minute),
