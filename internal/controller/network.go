@@ -31,6 +31,14 @@ func (r *LoadBalancerConfigReconciler) ClusterNetworkInterface(ctx context.Conte
 	return clusterIface, nil
 }
 
+func (r *LoadBalancerConfigReconciler) RenderSysctlConf(ctx context.Context) (string, error) {
+	l := logf.FromContext(ctx)
+	l.Info("Setting sysctl net.ipv6.conf.<interface>.accept_ra=2 on public interface", "interface", r.PublicInterface)
+	return renderTemplate("", "sysctl.conf.tmpl", map[string]any{
+		"Interface": r.PublicInterface,
+	})
+}
+
 func macAddressForInterface(interfaceName string) (string, error) {
 	macAddress := ""
 	ifList, err := net.Interfaces()

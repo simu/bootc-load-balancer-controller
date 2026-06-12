@@ -21,6 +21,8 @@ const (
 	ClusterNetworkNMConnectionFile  = "/etc/NetworkManager/system-connections/cluster-net.nmconnection"
 	KeepalivedDummyNMConnectionFile = "/etc/NetworkManager/system-connections/keepalived.nmconnection"
 
+	SysctlConfFile = "/etc/sysctl.d/50-lb.conf"
+
 	fileHeader = "# Managed by bootc-loadbalancer-controller\n"
 )
 

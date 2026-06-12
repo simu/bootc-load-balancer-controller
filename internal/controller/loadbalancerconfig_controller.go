@@ -140,6 +140,14 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 		errors = append(errors, err)
 	}
 
+	if sysctl, err := r.RenderSysctlConf(ctx); err == nil {
+		if err := r.WriteConfig(ctx, &lbconfig.ObjectMeta, SysctlConfFile, sysctl, 0644); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		errors = append(errors, err)
+	}
+
 	return ctrl.Result{}, multierr.Combine(errors...)
 }
 
