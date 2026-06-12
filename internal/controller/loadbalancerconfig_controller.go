@@ -43,6 +43,7 @@ type LocalBackendConfiguration struct {
 // +kubebuilder:rbac:groups=config.bootc-lb.syn.tools,resources=loadbalancerconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.bootc-lb.syn.tools,resources=loadbalancerconfigs/finalizers,verbs=update
 // +kubebuilder:rbac:groups=v1,resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=v1,resources=nodes,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -167,8 +168,14 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 // SetupWithManager sets up the controller with the Manager.
 func (r *LoadBalancerConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&lb.LoadBalancerConfig{}).
 		Named("loadbalancerconfig").
+		For(&lb.LoadBalancerConfig{}).
+		Watches(&corev1.Node{}, nodeUpdateHandler{
+			client: mgr.GetClient(),
+		}).
+		Watches(&corev1.Secret{}, credentialsUpdateHandler{
+			client: mgr.GetClient(),
+		}).
 		WithOptions(controller.Options{
 			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](
 				10*time.Second, 5*time.Minute),

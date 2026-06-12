@@ -33,6 +33,7 @@ rules:
 - apiGroups:
   - v1
   resources:
+  - nodes
   - secrets
   verbs:
   - get
