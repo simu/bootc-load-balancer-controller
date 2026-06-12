@@ -5,6 +5,15 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - nodes
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - config.bootc-lb.syn.tools
   resources:
   - loadbalancerconfigs
@@ -30,12 +39,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - v1
-  resources:
-  - nodes
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
