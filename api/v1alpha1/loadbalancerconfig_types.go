@@ -157,13 +157,14 @@ type LoadBalancerNodeStatus struct {
 	ConfigHashes map[string]string `json:"configHashes,omitempty"`
 
 	// The LB node's status.
-	// +kubebuilder:validation:Enum=Ready;NotReady
+	// +kubebuilder:validation:Enum=Configuring;Ready;Failed
 	Status string `json:"status"`
 }
 
 const (
-	NodeStatusNotReady = "NotReady"
-	NodeStatusReady    = "Ready"
+	NodeStatusConfiguring = "Configuring"
+	NodeStatusReady       = "Ready"
+	NodeStatusFailed      = "Failed"
 )
 
 // +kubebuilder:object:root=true

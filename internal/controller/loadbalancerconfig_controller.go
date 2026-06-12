@@ -72,8 +72,12 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, fmt.Errorf("failed to read cloud provider credentials: %w", err)
 	}
 
+	errors := []error{}
+
 	updated, err := r.ReconcileLBConfig(ctx, &lbconfig, &credentialSecret, nil)
-	statuserr := r.Status().Update(ctx, &lbconfig)
+	if err != nil {
+		errors = append(errors, err)
+	}
 
 	for component := range maps.Keys(updated) {
 		l.Info("reloading/restarting component", "component", component)
@@ -84,9 +88,19 @@ func (r *LoadBalancerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 			l.Info("not trying to restart service because config-root != /", "config-root", r.ConfigRoot, "command", cmd)
 		} else {
-			component.Reload(ctx)
+			err := component.Reload(ctx)
+			if err != nil {
+				errors = append(errors, err)
+			}
 		}
 	}
+
+	if len(errors) == 0 {
+		lbconfig.Status.Nodes[r.Hostname].Status = lb.NodeStatusReady
+	} else {
+		lbconfig.Status.Nodes[r.Hostname].Status = lb.NodeStatusFailed
+	}
+	statuserr := r.Status().Update(ctx, &lbconfig)
 
 	return ctrl.Result{}, multierr.Combine(err, statuserr)
 }
@@ -224,9 +238,6 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 	} else {
 		errors = append(errors, err)
 	}
-	if len(errors) == 0 {
-		lbconfig.Status.Nodes[r.Hostname].Status = "Ready"
-	}
 
 	return updated, multierr.Combine(errors...)
 }
@@ -254,7 +265,7 @@ func (r *LoadBalancerConfigReconciler) InitializeNodeStatus(ctx context.Context,
 	}
 	if lbconfig.Status.Nodes[r.Hostname] == nil {
 		lbconfig.Status.Nodes[r.Hostname] = &lb.LoadBalancerNodeStatus{
-			Status:    lb.NodeStatusNotReady,
+			Status:    lb.NodeStatusConfiguring,
 			PublicIP:  publicIP,
 			PrivateIP: privateIP,
 			VrrpIP:    internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),

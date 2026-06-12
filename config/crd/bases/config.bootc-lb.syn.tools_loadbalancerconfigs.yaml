@@ -371,8 +371,9 @@ spec:
                     status:
                       description: The LB node's status.
                       enum:
+                      - Configuring
                       - Ready
-                      - NotReady
+                      - Failed
                       type: string
                     vrrpIP:
                       description: The node's VRRP peer IP
