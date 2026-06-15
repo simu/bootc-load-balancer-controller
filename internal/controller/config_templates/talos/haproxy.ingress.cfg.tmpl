@@ -13,13 +13,15 @@ frontend fe-router-https
 {{- end }}
 
 backend be-router-http
-  option httpchk GET /healthz/ready
+  option httpchk GET /metrics
+  http-check expect status 426
 {{- range $index, $backend := .Backends }}
-  server server_{{ $index }} {{ $backend.Address }}:80 check port 1936 check-ssl verify none resolvers localdns send-proxy-v2
+  server server_{{ $index }} {{ $backend.Address }}:30080 check port 30091 send-proxy-v2
 {{- end }}
 
 backend be-router-https
-  option httpchk GET /healthz/ready
+  option httpchk GET /metrics
+  http-check expect status 426
 {{- range $index, $backend := .Backends }}
-  server server_{{ $index }} {{ $backend.Address }}:443 check port 1936 check-ssl verify none resolvers localdns send-proxy-v2
+  server server_{{ $index }} {{ $backend.Address }}:30443 check port 30091 send-proxy-v2
 {{- end }}
