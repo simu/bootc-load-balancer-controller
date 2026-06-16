@@ -1,0 +1,44 @@
+---
+apiVersion: config.bootc-lb.syn.tools/v1alpha1
+kind: LoadBalancerConfig
+metadata:
+  name: test-lb
+spec:
+  cloud: cloudscale
+  cloudCredentials:
+    name: cloudscale-token
+  distribution: openshift
+  # NOTE: Replace public IPs with cloudscale floating IPs if you want to try
+  # this out on cloudscale.
+  virtualAddresses:
+    api:
+      - address: 192.168.100.100/32
+        type: private
+      - address: 198.51.100.100/32
+        type: public
+      - address: 2a02:168:656d:8000::100/128
+        type: public
+    ingress:
+      - address: 198.51.100.80/32
+        type: public
+      - address: 2a02:168:656d:8000::200/128
+        type: public
+    nat:
+      address: 198.51.100.253/32
+      type: public
+  apiBackend:
+    nodeSelector:
+      matchLabels:
+        node-role.kubernetes.io/control-plane: ''
+  ingressBackend:
+    nodeSelector:
+      matchLabels:
+        node-role.kubernetes.io/infra: ''
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudscale-token
+stringData:
+  # Replace with a cloudscale API token
+  token: verysecrettoken
