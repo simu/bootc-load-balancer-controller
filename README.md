@@ -1,8 +1,35 @@
 # bootc-load-balancer-controller
-// TODO(user): Add simple overview of use/purpose
+
+:warning: DISCLAIMER: This code is early PoC quality. Run it at your own risk!
+
+Proof-of-concept controller for configuring load balancer VMs via Kubernetes
+API. The controller is intended to run on the LB VMs and fetch its dynamic
+config from the cluster it sits in front of.
+
+See [simu/fedora-bootc-loadbalancer] for a bootable container image which uses
+this controller to implement a modern and opinionated Kubernetes load balancer
+and NAT gateway.
+
+[simu/fedora-bootc-loadbalancer]: https://github.com/simu/fedora-bootc-loadbalancer
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+This repo contains a PoC implementation for a Kubernetes controller which is
+intended to run on LB VMs sitting in front of the cluster it connects to.
+
+The controller renders HAProxy, Keepalived, [Floaty], conntrackd,
+NetworkManager and firewalld configurations based on the `LoadBalancerConfig`
+custom resource to turn a generic [fedora-bootc-loadbalancer bootable
+container VM] into a working load balancer and NAT gateway for the cluster it
+reads the custom resource from.
+
+Currently, the controller ships with draft quality configuration templates for
+OpenShift 4 and Talos Linux.
+
+[Floaty]: https://github.com/vshn/floaty
+[fedora-bootc-loadbalancer bootable container VM]: https://github.com/simu/fedora-bootc-loadbalancer
+
+See the [post on the VSHN blog](https://vshn.ch/blog) (coming soon) for more details about the PoC.
 
 ## Getting Started
 
