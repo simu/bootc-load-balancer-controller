@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/netip"
 
-	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
+	lb "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
 )
 
 func (r *LoadBalancerConfigReconciler) RenderFirewallDirectRules(ctx context.Context, lb *lb.LoadBalancerConfig) (string, error) {

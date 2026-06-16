@@ -17,7 +17,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	configv1alpha1 "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
+	configv1alpha1 "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 

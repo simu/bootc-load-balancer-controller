@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectsyn/bootc-load-balancer-controller/test/utils"
+	"github.com/simu/bootc-load-balancer-controller/test/utils"
 )
 
 var (

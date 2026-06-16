@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
+	lb "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
 )
 
 type BackendList (*[]Backend)

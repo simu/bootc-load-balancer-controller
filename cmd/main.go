@@ -23,9 +23,9 @@ import (
 
 	"tailscale.com/net/netmon"
 
-	configv1alpha1 "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
-	"github.com/projectsyn/bootc-load-balancer-controller/internal/controller"
-	"github.com/projectsyn/bootc-load-balancer-controller/internal/render"
+	configv1alpha1 "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
+	"github.com/simu/bootc-load-balancer-controller/internal/controller"
+	"github.com/simu/bootc-load-balancer-controller/internal/render"
 	// +kubebuilder:scaffold:imports
 )
 

@@ -14,8 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
-	"github.com/projectsyn/bootc-load-balancer-controller/internal/controller"
+	lb "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
+	"github.com/simu/bootc-load-balancer-controller/internal/controller"
 )
 
 func parseBackendString(prefix, backends string) ([]controller.Backend, error) {

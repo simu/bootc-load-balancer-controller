@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
+	lb "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
 )
 
 // LoadBalancerConfigReconciler reconciles a LoadBalancerConfig object

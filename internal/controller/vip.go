@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	lb "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
+	lb "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

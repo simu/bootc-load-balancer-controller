@@ -7,7 +7,7 @@ domain: bootc-lb.syn.tools
 layout:
 - go.kubebuilder.io/v4
 projectName: bootc-load-balancer-controller
-repo: github.com/projectsyn/bootc-load-balancer-controller
+repo: github.com/simu/bootc-load-balancer-controller
 resources:
 - api:
     crdVersion: v1
@@ -16,6 +16,6 @@ resources:
   domain: bootc-lb.syn.tools
   group: config
   kind: LoadBalancerConfig
-  path: github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1
+  path: github.com/simu/bootc-load-balancer-controller/api/v1alpha1
   version: v1alpha1
 version: "3"

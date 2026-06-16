@@ -11,7 +11,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configv1alpha1 "github.com/projectsyn/bootc-load-balancer-controller/api/v1alpha1"
+	configv1alpha1 "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
 )
 
 var _ = Describe("LoadBalancerConfig Controller", func() {

@@ -1,4 +1,4 @@
-module github.com/projectsyn/bootc-load-balancer-controller
+module github.com/simu/bootc-load-balancer-controller
 
 go 1.26.4
 
