@@ -27,8 +27,13 @@ var _ = Describe("LoadBalancerConfig Controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		detectedPublicInterface, err := netmon.DefaultRouteInterface()
 		Expect(err).NotTo(HaveOccurred())
-		clusterNet, err := netip.ParsePrefix("192.168.100.0/24")
+		// NOTE(sg): use primary iface net as cluster net to avoid
+		// issues in CI
+		primaryIP, err := primaryIPAddressForInterface(detectedPublicInterface, nil)
 		Expect(err).NotTo(HaveOccurred())
+		pip, err := netip.ParsePrefix(primaryIP)
+		Expect(err).NotTo(HaveOccurred())
+		clusterNet := pip.Masked()
 
 		ctx := context.Background()
 
