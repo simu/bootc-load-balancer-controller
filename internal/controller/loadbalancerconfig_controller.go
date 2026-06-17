@@ -211,6 +211,12 @@ func (r *LoadBalancerConfigReconciler) RenderConfig(ctx context.Context, renderF
 }
 
 func (r *LoadBalancerConfigReconciler) InitializeNodeStatus(ctx context.Context, lbconfig *lb.LoadBalancerConfig) error {
+	// Early init the cr status
+	if lbconfig.Status.Nodes == nil {
+		lbconfig.Status.Nodes = map[string]*lb.LoadBalancerNodeStatus{}
+		lbconfig.Status.Nodes[r.Hostname] = &lb.LoadBalancerNodeStatus{}
+	}
+
 	internalIPs, err := r.internalIPs()
 	if err != nil {
 		return fmt.Errorf("failed to compute internal IPs: %w", err)
@@ -228,19 +234,11 @@ func (r *LoadBalancerConfigReconciler) InitializeNodeStatus(ctx context.Context,
 		return fmt.Errorf("failed to determine primary IP for cluster network interface: %w", err)
 	}
 
-	if lbconfig.Status.Nodes == nil {
-		lbconfig.Status.Nodes = map[string]*lb.LoadBalancerNodeStatus{}
-	}
-	if lbconfig.Status.Nodes[r.Hostname] == nil {
-		lbconfig.Status.Nodes[r.Hostname] = &lb.LoadBalancerNodeStatus{
-			Status:    lb.NodeStatusConfiguring,
-			PublicIP:  publicIP,
-			PrivateIP: privateIP,
-			VrrpIP:    internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary),
-		}
-	}
+	lbconfig.Status.Nodes[r.Hostname].Status = lb.NodeStatusConfiguring
+	lbconfig.Status.Nodes[r.Hostname].PublicIP = publicIP
+	lbconfig.Status.Nodes[r.Hostname].PrivateIP = privateIP
+	lbconfig.Status.Nodes[r.Hostname].VrrpIP = internalIPs.myInternalIP(r.KeepalivedConfig.IsPrimary)
 	return nil
-
 }
 
 func (r *LoadBalancerConfigReconciler) CompareAndWrite(ctx context.Context, lbconfig *lb.LoadBalancerConfig, configfile, configdata string, mode os.FileMode) (bool, error) {
