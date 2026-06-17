@@ -141,15 +141,10 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 		errors = append(errors, err)
 	}
 
-	if keepalived, err := r.RenderKeepalivedConfig(ctx, lbconfig); err == nil {
-		changed, err := r.CompareAndWrite(ctx, lbconfig, KeepalivedConfigFile, keepalived, 0644)
-		if err != nil {
-			errors = append(errors, err)
-		} else if changed {
-			updated[Keepalived] = struct{}{}
-		}
-	} else {
+	if changed, err := r.RenderConfig(ctx, r.RenderKeepalivedConfig, lbconfig, KeepalivedConfigFile, 0644); err != nil {
 		errors = append(errors, err)
+	} else if changed {
+		updated[Keepalived] = struct{}{}
 	}
 
 	if floaty, err := r.RenderFloatyConfig(ctx, lbconfig, credentialSecret); err == nil {
@@ -163,83 +158,56 @@ func (r *LoadBalancerConfigReconciler) ReconcileLBConfig(ctx context.Context, lb
 		errors = append(errors, err)
 	}
 
-	if conntrackd, err := r.RenderConntrackdConfig(ctx, lbconfig); err == nil {
-		changed, err := r.CompareAndWrite(ctx, lbconfig, ConntrackdConfigFile, conntrackd, 0644)
-		if err != nil {
-			errors = append(errors, err)
-		} else if changed {
-			updated[Conntrackd] = struct{}{}
-		}
-	} else {
+	if changed, err := r.RenderConfig(ctx, r.RenderConntrackdConfig, lbconfig, ConntrackdConfigFile, 0644); err != nil {
 		errors = append(errors, err)
+	} else if changed {
+		updated[Conntrackd] = struct{}{}
 	}
 
-	if publicNMConn, err := r.RenderPublicNMConnection(ctx, lbconfig); err == nil {
-		changed, err := r.CompareAndWrite(ctx, lbconfig, PublicNMConnectionFile, publicNMConn, 0600)
-		if err != nil {
-			errors = append(errors, err)
-		} else if changed {
-			updated[NetworkManager] = struct{}{}
-		}
-	} else {
+	if changed, err := r.RenderConfig(ctx, r.RenderPublicNMConnection, lbconfig, PublicNMConnectionFile, 0600); err != nil {
 		errors = append(errors, err)
+	} else if changed {
+		updated[NetworkManager] = struct{}{}
 	}
 
-	if clusterNetNMConn, err := r.RenderClusterNetNMConnection(ctx); err == nil {
-		changed, err := r.CompareAndWrite(ctx, lbconfig, ClusterNetworkNMConnectionFile, clusterNetNMConn, 0600)
-		if err != nil {
-			errors = append(errors, err)
-		} else if changed {
-			updated[NetworkManager] = struct{}{}
-		}
-	} else {
+	if changed, err := r.RenderConfig(ctx, r.RenderClusterNetNMConnection, lbconfig, ClusterNetworkNMConnectionFile, 0600); err != nil {
 		errors = append(errors, err)
+	} else if changed {
+		updated[NetworkManager] = struct{}{}
 	}
 
-	if keepalivedNMConn, err := r.RenderKeepalivedDummyNMConnection(ctx, lbconfig); err == nil {
-		changed, err := r.CompareAndWrite(ctx, lbconfig, KeepalivedDummyNMConnectionFile, keepalivedNMConn, 0600)
-		if err != nil {
-			errors = append(errors, err)
-		} else if changed {
-			updated[NetworkManager] = struct{}{}
-		}
-	} else {
+	if changed, err := r.RenderConfig(ctx, r.RenderKeepalivedDummyNMConnection, lbconfig, KeepalivedDummyNMConnectionFile, 0600); err != nil {
 		errors = append(errors, err)
+	} else if changed {
+		updated[NetworkManager] = struct{}{}
 	}
 
-	if sysctl, err := r.RenderSysctlConf(ctx); err == nil {
-		changed, err := r.CompareAndWrite(ctx, lbconfig, SysctlConfFile, sysctl, 0644)
-		if err != nil {
-			errors = append(errors, err)
-		} else if changed {
-			updated[Sysctl] = struct{}{}
-		}
-	} else {
+	if changed, err := r.RenderConfig(ctx, r.RenderSysctlConf, lbconfig, SysctlConfFile, 0644); err != nil {
 		errors = append(errors, err)
+	} else if changed {
+		updated[Sysctl] = struct{}{}
 	}
 
-	if zoneext, err := r.RenderFirewallExternalZone(ctx, lbconfig); err == nil {
-		changed, err := r.CompareAndWrite(ctx, lbconfig, FirewalldExternalZone, zoneext, 0644)
-		if err != nil {
-			errors = append(errors, err)
-		} else if changed {
-			updated[Firewalld] = struct{}{}
-		}
-	} else {
+	if changed, err := r.RenderConfig(ctx, r.RenderFirewallExternalZone, lbconfig, FirewalldExternalZone, 0644); err != nil {
 		errors = append(errors, err)
+	} else if changed {
+		updated[Firewalld] = struct{}{}
 	}
-	if fwdirect, err := r.RenderFirewallDirectRules(ctx, lbconfig); err == nil {
-		changed, err := r.CompareAndWrite(ctx, lbconfig, FirewalldDirectFile, fwdirect, 0644)
-		if err != nil {
-			errors = append(errors, err)
-		} else if changed {
-			updated[Firewalld] = struct{}{}
-		}
-	} else {
+	if changed, err := r.RenderConfig(ctx, r.RenderFirewallDirectRules, lbconfig, FirewalldDirectFile, 0644); err != nil {
 		errors = append(errors, err)
+	} else if changed {
+		updated[Firewalld] = struct{}{}
 	}
 
 	return updated, multierr.Combine(errors...)
+}
+
+func (r *LoadBalancerConfigReconciler) RenderConfig(ctx context.Context, renderFunc func(context.Context, *lb.LoadBalancerConfig) (string, error), lbconfig *lb.LoadBalancerConfig, configFile string, mode os.FileMode) (bool, error) {
+	config, err := renderFunc(ctx, lbconfig)
+	if err != nil {
+		return false, err
+	}
+	return r.CompareAndWrite(ctx, lbconfig, configFile, config, mode)
 }
 
 func (r *LoadBalancerConfigReconciler) InitializeNodeStatus(ctx context.Context, lbconfig *lb.LoadBalancerConfig) error {
