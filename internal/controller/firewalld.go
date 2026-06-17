@@ -8,9 +8,9 @@ import (
 	lb "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
 )
 
-func (r *LoadBalancerConfigReconciler) RenderFirewallDirectRules(ctx context.Context, lb *lb.LoadBalancerConfig) (string, error) {
+func (r *LoadBalancerConfigReconciler) RenderFirewallDirectRules(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
 
-	natVip, err := netip.ParsePrefix(lb.Spec.VirtualAddresses.NAT.Address)
+	natVip, err := netip.ParsePrefix(lbconfig.Spec.VirtualAddresses.NAT.Address)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse NAT VIP: %w", err)
 	}
@@ -22,8 +22,8 @@ func (r *LoadBalancerConfigReconciler) RenderFirewallDirectRules(ctx context.Con
 	})
 }
 
-func (r *LoadBalancerConfigReconciler) RenderFirewallExternalZone(ctx context.Context, lb *lb.LoadBalancerConfig) (string, error) {
-	vips, err := publicVIPs(&lb.Spec.VirtualAddresses)
+func (r *LoadBalancerConfigReconciler) RenderFirewallExternalZone(ctx context.Context, lbconfig *lb.LoadBalancerConfig) (string, error) {
+	vips, err := publicVIPs(&lbconfig.Spec.VirtualAddresses)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare VIPs: %w", err)
 	}

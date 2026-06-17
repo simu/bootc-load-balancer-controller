@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/netip"
 
+	lb "github.com/simu/bootc-load-balancer-controller/api/v1alpha1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"tailscale.com/net/routetable"
@@ -32,7 +33,7 @@ func (r *LoadBalancerConfigReconciler) ClusterNetworkInterface(ctx context.Conte
 	return clusterIface, nil
 }
 
-func (r *LoadBalancerConfigReconciler) RenderSysctlConf(ctx context.Context) (string, error) {
+func (r *LoadBalancerConfigReconciler) RenderSysctlConf(ctx context.Context, _ *lb.LoadBalancerConfig) (string, error) {
 	l := logf.FromContext(ctx)
 	l.Info("Setting sysctl net.ipv6.conf.<interface>.accept_ra=2 on public interface", "interface", r.PublicInterface)
 	return renderTemplate("", "sysctl.conf.tmpl", map[string]any{
@@ -43,7 +44,7 @@ func (r *LoadBalancerConfigReconciler) RenderSysctlConf(ctx context.Context) (st
 func macAddressForInterface(interfaceName string) (string, error) {
 	iface, err := net.InterfaceByName(interfaceName)
 	if err != nil {
-		return "", fmt.Errorf("Unable to find interface: %w", err)
+		return "", fmt.Errorf("unable to find interface: %w", err)
 	}
 	return iface.HardwareAddr.String(), nil
 }
@@ -51,14 +52,14 @@ func macAddressForInterface(interfaceName string) (string, error) {
 func primaryIPAddressForInterface(interfaceName string, ifaceNet *netip.Prefix) (string, error) {
 	iface, err := net.InterfaceByName(interfaceName)
 	if err != nil {
-		return "", fmt.Errorf("Unable to find interface: %w", err)
+		return "", fmt.Errorf("unable to find interface: %w", err)
 	}
 	addrs, err := iface.Addrs()
 	if err != nil {
-		return "", fmt.Errorf("Failed to get addresses for interface: %w", err)
+		return "", fmt.Errorf("failed to get addresses for interface: %w", err)
 	}
 	if len(addrs) == 0 {
-		return "", fmt.Errorf("Interface has no addresses")
+		return "", fmt.Errorf("interface has no addresses")
 	}
 
 	primaryIP := ""
@@ -68,7 +69,7 @@ func primaryIPAddressForInterface(interfaceName string, ifaceNet *netip.Prefix) 
 			continue
 		}
 		if err != nil {
-			return "", fmt.Errorf("Failed to parse IP: %w", err)
+			return "", fmt.Errorf("failed to parse IP: %w", err)
 		}
 		if ifaceNet != nil && ip.Bits() == ifaceNet.Bits() {
 			primaryIP = ip.String()
@@ -79,7 +80,7 @@ func primaryIPAddressForInterface(interfaceName string, ifaceNet *netip.Prefix) 
 		}
 	}
 	if primaryIP == "" {
-		return "", fmt.Errorf("Didn't find an IP which matches interface network prefix length")
+		return "", fmt.Errorf("didn't find an IP which matches interface network prefix length")
 	}
 
 	return primaryIP, nil

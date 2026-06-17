@@ -28,8 +28,8 @@ func (h credentialsUpdateHandler) Create(ctx context.Context, ev event.TypedCrea
 
 // Update requeues all LBConfig objects
 func (h credentialsUpdateHandler) Update(ctx context.Context, ev event.TypedUpdateEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-	//TODO(sg): we should filter this somehow -> for realz, we probably
-	//want to run a dynamic watch on only secrets referenced by LBConfigs
+	// TODO(sg): we should filter this somehow -> for realz, we probably
+	// want to run a dynamic watch on only secrets referenced by LBConfigs
 
 	h.queueAllLBConfigs(ctx, q)
 }

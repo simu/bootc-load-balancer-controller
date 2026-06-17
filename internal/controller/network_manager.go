@@ -47,7 +47,7 @@ func (r *LoadBalancerConfigReconciler) RenderPublicNMConnection(ctx context.Cont
 	})
 }
 
-func (r *LoadBalancerConfigReconciler) RenderClusterNetNMConnection(ctx context.Context) (string, error) {
+func (r *LoadBalancerConfigReconciler) RenderClusterNetNMConnection(ctx context.Context, _ *lb.LoadBalancerConfig) (string, error) {
 	l := logf.FromContext(ctx)
 
 	clusterInterface, err := r.ClusterNetworkInterface(ctx)
