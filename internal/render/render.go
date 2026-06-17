@@ -65,7 +65,6 @@ func RenderFile(r *controller.LoadBalancerConfigReconciler, file, apiBackends, i
 		} else if err == io.EOF {
 			break
 		} else {
-			fmt.Println(doc, err)
 			return fmt.Errorf("failed to read input file: %w", err)
 		}
 	}

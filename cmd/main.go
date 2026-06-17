@@ -84,19 +84,23 @@ func main() {
 	flag.BoolVar(&isPrimary, "primary", false,
 		"If set, this LB will become the primary instance")
 	flag.StringVar(&publicInterface, "public-interface", detectedPublicInterface,
-		"Configure the LB's public interface. By default, the controller will pick the interface with the default route as the public interface")
+		"Configure the LB's public interface. "+
+			"By default, the controller will pick the interface with the default route as the public interface")
 	flag.StringVar(&clusterNetwork, "cluster-network", "172.18.200.0/24",
 		"Configure the LB's cluster network CIDR. This network must allow VRRP traffic.")
 	flag.StringVar(&configRoot, "config-root", "/",
 		"Base directory for config files. Defaults to the LB's root directory")
 	flag.StringVar(&renderFromFile, "render-from-file", "",
-		"Just render configs based on the custom resource in the provided YAML file and exit. Intended to be used to bootstrap new LBs")
+		"Just render configs based on the custom resource in the provided YAML file and exit. "+
+			"Intended to be used to bootstrap new LBs")
 	flag.StringVar(&apiBackends, "api-backends", "",
 		"Comma-separated list API backend IPs to use when rendering config from a custom resource provided in a YAML file.")
 	flag.StringVar(&ingressBackends, "ingress-backends", "",
-		"Comma-separated list ingress backend IPs to use when rendering config from a custom resource provided in a YAML file.")
+		"Comma-separated list ingress backend IPs. "+
+			"Only used when rendering config from a custom resource provided in a YAML file.")
 	flag.StringVar(&watchNamespace, "watch-namespace", "default",
-		"The namespace in which to reconcile LoadBalancerConfig resources. Can be set to the empty string to reconcile resources in all namespaces")
+		"The namespace in which to reconcile LoadBalancerConfig resources. "+
+			"Can be set to the empty string to reconcile resources in all namespaces")
 
 	opts := zap.Options{
 		Development: true,

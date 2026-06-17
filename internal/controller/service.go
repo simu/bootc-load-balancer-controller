@@ -36,7 +36,7 @@ func (s NodeService) ReloadCommand() (string, error) {
 	case Firewalld:
 		commandString = "firewall-cmd --reload"
 	default:
-		return "", fmt.Errorf("Missing reload/restart command for %s", s)
+		return "", fmt.Errorf("missing reload/restart command for %s", s)
 	}
 	return commandString, nil
 }
