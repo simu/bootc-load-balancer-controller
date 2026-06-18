@@ -26,10 +26,11 @@ reads the custom resource from.
 Currently, the controller ships with draft quality configuration templates for
 OpenShift 4 and Talos Linux.
 
+See the [post on the VSHN blog] for more details about the PoC.
+
 [Floaty]: https://github.com/vshn/floaty
 [fedora-bootc-loadbalancer bootable container VM]: https://github.com/simu/fedora-bootc-loadbalancer
-
-See the [post on the VSHN blog](https://vshn.ch/blog) (coming soon) for more details about the PoC.
+[post on the VSHN blog]: https://www.vshn.ch/en/blog/building-a-modern-load-balancer-and-nat-gateway-with-fedora-bootable-containers/
 
 ## Getting Started
 
